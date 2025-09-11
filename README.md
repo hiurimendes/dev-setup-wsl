@@ -181,7 +181,7 @@ nid    # npm install --save-dev
 nig    # npm install -g
 ```
 
-### System Aliases
+### System & Navigation Aliases
 ```bash
 ll     # ls -alF
 la     # ls -A
@@ -189,6 +189,53 @@ l      # ls -CF
 ..     # cd ..
 ...    # cd ../..
 ....   # cd ../../..
+back   # cd $OLDPWD (go back to previous directory)
+home   # cd ~ (go to home directory)
+root   # cd / (go to root directory)
+```
+
+### File & Directory Management Aliases
+```bash
+# Directory operations
+md     # mkdir -p (create directories with parent directories)
+rd     # rmdir (remove empty directory)
+rf     # rm -rf (remove directory and contents recursively)
+mkcd   # create directory and cd into it
+
+# File operations
+cp     # cp -i (copy with confirmation)
+mv     # mv -i (move with confirmation)
+rm     # rm -i (remove with confirmation)
+touch  # create empty file
+find   # find . -name (search for files by name)
+size   # du -sh (show directory/file size)
+count  # count files in current directory
+
+# File permissions
++x     # chmod +x (make executable)
+755    # chmod 755 (executable permissions)
+644    # chmod 644 (regular file permissions)
+```
+
+### File Viewing & Content Aliases
+```bash
+cat    # cat -n (with line numbers)
+less   # less -R (with colors)
+head   # head -n 20 (first 20 lines)
+tail   # tail -n 20 (last 20 lines)
+tf     # tail -f (follow file changes)
+grep   # grep --color=auto (with colors)
+tree   # tree -C (colorized directory tree)
+du     # du -h (human readable disk usage)
+df     # df -h (human readable filesystem usage)
+```
+
+### Archive Management Aliases
+```bash
+tarzip # tar -czf (create tar.gz archive)
+untar  # tar -xzf (extract tar.gz archive)
+zip    # zip -r (create zip archive recursively)
+unzip  # unzip (extract zip archive)
 ```
 
 ## 🛠️ Customization
