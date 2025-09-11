@@ -124,7 +124,17 @@ if [ ! -d "$HOME/.pyenv" ]; then
     # Install pyenv
     curl https://pyenv.run | bash
     
-    # Add pyenv to zshrc
+    # Add pyenv to profile files for proper initialization
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
+    echo 'eval "$(pyenv init --path)"' >> ~/.profile
+    
+    # Add pyenv to zprofile
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zprofile
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zprofile
+    echo 'eval "$(pyenv init --path)"' >> ~/.zprofile
+    
+    # Add pyenv to zshrc for interactive shells
     echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
     echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
     echo 'eval "$(pyenv init -)"' >> ~/.zshrc
