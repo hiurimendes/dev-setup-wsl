@@ -219,6 +219,45 @@ alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
 
+# File and directory management aliases
+alias md='mkdir -p'
+alias rd='rmdir'
+alias rf='rm -rf'
+alias cp='cp -i'
+alias mv='mv -i'
+alias rm='rm -i'
+alias touch='touch'
+alias find='find . -name'
+alias grep='grep --color=auto'
+alias tree='tree -C'
+alias du='du -h'
+alias df='df -h'
+alias size='du -sh'
+alias count='find . -type f | wl -l'
+alias back='cd $OLDPWD'
+alias home='cd ~'
+alias root='cd /'
+alias mkcd='function _mkcd(){ mkdir -p "$1" && cd "$1"; }; _mkcd'
+
+# File permissions
+alias +x='chmod +x'
+alias 755='chmod 755'
+alias 644='chmod 644'
+
+# File viewing and editing
+alias cat='cat -n'
+alias less='less -R'
+alias more='more'
+alias head='head -n 20'
+alias tail='tail -n 20'
+alias tf='tail -f'
+
+# Archive management
+alias tarzip='tar -czf'
+alias untar='tar -xzf'
+alias zip='zip -r'
+alias unzip='unzip'
+
 # Git aliases
 alias gs='git status'
 alias ga='git add'
