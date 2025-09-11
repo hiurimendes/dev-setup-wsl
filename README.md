@@ -291,6 +291,6 @@ This script modifies your system configuration. While it's designed to be safe, 
 
 **Made with ❤️ for the developer community**
 
-[Report Bug](https://github.com/your-username/wsl-ubuntu-setup/issues) · [Request Feature](https://github.com/your-username/wsl-ubuntu-setup/issues) · [Contribute](https://github.com/your-username/wsl-ubuntu-setup/pulls)
+[Report Bug](https://github.com/hiurimendes/dev-setup-wsl/issues) · [Request Feature](https://github.com/hiurimendes/dev-setup-wsl/issues) · [Contribute](https://github.com/hiurimendes/dev-setup-wsl/pulls)
 
 </div>
