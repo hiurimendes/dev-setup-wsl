@@ -490,8 +490,10 @@ sdk list java
 
 ### Performance Tips
 - Use `docker system prune` regularly to clean up Docker
-- Run `sdk-update` periodically for Android SDK updates
+- Run `sdk-update` periodically for Android SDK updates  
+- Use `sdkman-update` to keep SDKMAN! current
 - Use `nvm use` to switch Node versions per project
+- Use `java-use` to switch Java versions per project
 - Enable WSL2 for better performance
 
 ---
@@ -535,6 +537,7 @@ git config --global init.defaultBranch main
 - [NVM Documentation](https://github.com/nvm-sh/nvm)
 - [Docker Documentation](https://docs.docker.com/)
 - [pyenv Documentation](https://github.com/pyenv/pyenv)
+- [SDKMAN! Documentation](https://sdkman.io/)
 - [GitHub CLI Documentation](https://cli.github.com/)
 - [Android Developer Documentation](https://developer.android.com/)
 - [Gradle Documentation](https://gradle.org/guides/)
