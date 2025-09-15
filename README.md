@@ -1,343 +1,428 @@
-# WSL Ubuntu Web Development Setup 🚀
+#!/bin/bash
 
-<div align="center">
+# WSL Ubuntu Web Development Environment Setup Script
+# This script installs and configures essential tools for web development
 
-![WSL](https://img.shields.io/badge/WSL-Ubuntu-orange?style=for-the-badge&logo=ubuntu)
-![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white)
+set -e  # Exit on any error
 
-*One-command setup for the perfect WSL Ubuntu web development environment*
+echo "🚀 Starting WSL Ubuntu Web Development Environment Setup..."
 
-</div>
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-## 📋 What's Included
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
 
-This automated setup script configures a complete web development environment on WSL Ubuntu with:
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
 
-- 🐚 **Oh My Zsh** - Enhanced terminal with useful plugins
-- 📦 **NVM** - Node Version Manager with latest LTS Node.js
-- 🐳 **Docker** - Containerization platform with Docker Compose
-- 🐍 **pyenv** - Python version manager with latest stable Python
-- 📝 **Git** - Version control with sensible configurations
-- 🐙 **GitHub CLI** - Command-line interface for GitHub
-- ⚡ **Useful aliases** - Time-saving shortcuts for common tasks
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
 
-## 🚀 Quick Start
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
 
-### Prerequisites
+# Update system packages
+print_status "Updating system packages..."
+sudo apt update && sudo apt upgrade -y
 
-- Windows 10/11 with WSL2 enabled
-- Ubuntu distribution installed in WSL
+# Install essential packages
+print_status "Installing essential packages..."
+sudo apt install -y curl wget git build-essential software-properties-common apt-transport-https ca-certificates gnupg lsb-release zsh
 
-### One-Command Installation
+# Install Oh My Zsh
+print_status "Installing Oh My Zsh..."
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    print_success "Oh My Zsh installed successfully"
+else
+    print_warning "Oh My Zsh already installed"
+fi
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/your-username/wsl-ubuntu-setup/main/setup-wsl-dev.sh | bash
-```
+# Change default shell to zsh
+print_status "Setting zsh as default shell..."
+if [ "$SHELL" != "/usr/bin/zsh" ]; then
+    chsh -s $(which zsh)
+    print_success "Default shell changed to zsh (restart terminal to take effect)"
+else
+    print_warning "Zsh is already the default shell"
+fi
 
-### Manual Installation
+# Install NVM (Node Version Manager)
+print_status "Installing NVM..."
+if [ ! -d "$HOME/.nvm" ]; then
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.4/install.sh | bash
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    
+    # Add NVM to zshrc
+    echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.zshrc
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.zshrc
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> ~/.zshrc
+    
+    # Install latest LTS Node.js
+    nvm install --lts
+    nvm use --lts
+    nvm alias default node
+    print_success "NVM and Node.js LTS installed successfully"
+else
+    print_warning "NVM already installed"
+fi
 
-1. **Clone this repository:**
-   ```bash
-   git clone https://github.com/your-username/wsl-ubuntu-setup.git
-   cd wsl-ubuntu-setup
-   ```
+# Install Docker
+print_status "Installing Docker..."
+if ! command -v docker &> /dev/null; then
+    # Add Docker's official GPG key
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    
+    # Add Docker repository
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    # Update package index and install Docker
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io
+    
+    # Add current user to docker group
+    sudo usermod -aG docker $USER
+    
+    print_success "Docker installed successfully"
+else
+    print_warning "Docker already installed"
+fi
 
-2. **Make the script executable:**
-   ```bash
-   chmod +x setup-wsl-dev.sh
-   ```
+# Install Docker Compose
+print_status "Installing Docker Compose..."
+if ! command -v docker-compose &> /dev/null; then
+    # Get latest version of docker-compose
+    DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
+    sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    print_success "Docker Compose installed successfully"
+else
+    print_warning "Docker Compose already installed"
+fi
 
-3. **Run the setup script:**
-   ```bash
-   ./setup-wsl-dev.sh
-   ```
+# Install pyenv (Python Version Manager)
+print_status "Installing pyenv (Python Version Manager)..."
+if [ ! -d "$HOME/.pyenv" ]; then
+    # Install dependencies for pyenv
+    sudo apt install -y make build-essential libssl-dev zlib1g-dev \
+    libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
+    libffi-dev liblzma-dev
+    
+    # Install pyenv
+    curl https://pyenv.run | bash
+    
+    # Add pyenv to profile files for proper initialization
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
+    echo 'eval "$(pyenv init --path)"' >> ~/.profile
+    
+    # Add pyenv to zprofile
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zprofile
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zprofile
+    echo 'eval "$(pyenv init --path)"' >> ~/.zprofile
+    
+    # Add pyenv to zshrc for interactive shells
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
+    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
+    echo 'eval "$(pyenv init -)"' >> ~/.zshrc
+    
+    # Load pyenv for current session
+    export PYENV_ROOT="$HOME/.pyenv"
+    command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    
+    # Install latest stable Python
+    print_status "Installing latest stable Python..."
+    PYTHON_VERSION=$(pyenv install --list | grep -E "^\s*[0-9]+\.[0-9]+\.[0-9]+$" | tail -1 | xargs)
+    pyenv install $PYTHON_VERSION
+    pyenv global $PYTHON_VERSION
+    
+    print_success "pyenv and Python $PYTHON_VERSION installed successfully"
+else
+    print_warning "pyenv already installed"
+fi
 
-## 🔧 Post-Installation Steps
+# Configure Git (basic setup)
+print_status "Configuring Git..."
+if [ -z "$(git config --global user.name)" ]; then
+    echo "Please enter your Git username:"
+    read -r git_username
+    git config --global user.name "$git_username"
+fi
 
-After the script completes:
+if [ -z "$(git config --global user.email)" ]; then
+    echo "Please enter your Git email:"
+    read -r git_email
+    git config --global user.email "$git_email"
+fi
 
-1. **Restart your terminal** or run:
-   ```bash
-   exec zsh
-   ```
+# Set some useful Git defaults
+git config --global init.defaultBranch main
+git config --global pull.rebase false
+git config --global core.autocrlf input
 
-2. **Restart WSL** (if needed for Docker):
-   ```bash
-   # In Windows PowerShell/CMD
-   wsl --shutdown
-   wsl
-   ```
+print_success "Git configured successfully"
 
-3. **Authenticate with GitHub:**
-   ```bash
-   gh auth login
-   ```
+# Install GitHub CLI
+print_status "Installing GitHub CLI..."
+if ! command -v gh &> /dev/null; then
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    sudo apt update
+    sudo apt install -y gh
+    print_success "GitHub CLI installed successfully"
+else
+    print_warning "GitHub CLI already installed"
+fi
 
-4. **Verify installations:**
-   ```bash
-   node --version
-   python --version
-   docker --version
-   docker-compose --version
-   ```
+# Install Android SDK and set up Android development environment
+print_status "Setting up Android SDK for development..."
 
-## 📚 Installed Tools Overview
+# Install Java 17 (required for latest Android SDK)
+sudo apt update
+sudo apt install -y openjdk-17-jdk
 
-### Oh My Zsh Configuration
+# Install Android SDK command line tools
+print_status "Installing Android SDK Command Line Tools..."
+ANDROID_HOME="$HOME/Android/Sdk"
+mkdir -p "$ANDROID_HOME"
 
-The script sets up Oh My Zsh with these plugins:
-- `git` - Git aliases and branch info
-- `node` - Node.js completion
-- `npm` - NPM completion
-- `docker` - Docker completion
-- `docker-compose` - Docker Compose completion
-- `python` - Python completion
-- `pyenv` - pyenv integration
-- `zsh-autosuggestions` - Command suggestions
-- `zsh-syntax-highlighting` - Syntax highlighting
+# Download and install command line tools
+cd /tmp
+wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+unzip commandlinetools-linux-9477386_latest.zip
+mkdir -p "$ANDROID_HOME/cmdline-tools/latest"
+mv cmdline-tools/* "$ANDROID_HOME/cmdline-tools/latest/"
+rm -rf cmdline-tools commandlinetools-linux-9477386_latest.zip
 
-### Node.js with NVM
+# Set up Android environment variables
+echo '' >> ~/.zshrc
+echo '# Android SDK Configuration' >> ~/.zshrc
+echo 'export ANDROID_HOME="$HOME/Android/Sdk"' >> ~/.zshrc
+echo 'export ANDROID_SDK_ROOT="$ANDROID_HOME"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/platform-tools:$PATH"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/build-tools:$PATH"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/emulator:$PATH"' >> ~/.zshrc
+echo 'export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"' >> ~/.zshrc
 
-```bash
-# Install latest LTS Node.js
-nvm install --lts
-nvm use --lts
+# Load Android environment for current session
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+export PATH="$ANDROID_HOME/build-tools:$PATH"
+export PATH="$ANDROID_HOME/emulator:$PATH"
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 
-# Install specific Node.js version
-nvm install 18.17.0
-nvm use 18.17.0
+# Accept Android SDK licenses
+yes | sdkmanager --licenses >/dev/null 2>&1
 
-# List installed versions
-nvm list
-```
+# Install essential Android SDK components
+print_status "Installing essential Android SDK components..."
+sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34" "system-images;android-34;google_apis;x86_64"
 
-### Python with pyenv
+# Create symbolic link to Windows Android Studio SDK (if exists)
+WINDOWS_ANDROID_SDK="/mnt/c/Users/$USER/AppData/Local/Android/Sdk"
+if [ -d "$WINDOWS_ANDROID_SDK" ]; then
+    print_status "Found Windows Android Studio SDK, creating symbolic links..."
+    
+    # Create backup of WSL Android directory
+    if [ -d "$ANDROID_HOME" ]; then
+        mv "$ANDROID_HOME" "${ANDROID_HOME}.backup"
+    fi
+    
+    # Create symbolic link to Windows SDK
+    ln -sf "$WINDOWS_ANDROID_SDK" "$ANDROID_HOME"
+    
+    print_success "Android SDK synchronized with Windows Android Studio"
+    print_warning "Note: You can switch back to WSL-only SDK by removing the symlink:"
+    print_warning "rm $ANDROID_HOME && mv ${ANDROID_HOME}.backup $ANDROID_HOME"
+else
+    print_warning "Windows Android Studio SDK not found at $WINDOWS_ANDROID_SDK"
+    print_success "Using WSL-only Android SDK installation"
+fi
 
-```bash
-# List available Python versions
-pyenv install --list
+# Install Gradle (for Android builds)
+print_status "Installing Gradle..."
+if ! command -v gradle &> /dev/null; then
+    wget https://services.gradle.org/distributions/gradle-8.4-bin.zip -P /tmp
+    sudo unzip -d /opt/gradle /tmp/gradle-8.4-bin.zip
+    echo 'export GRADLE_HOME="/opt/gradle/gradle-8.4"' >> ~/.zshrc
+    echo 'export PATH="$GRADLE_HOME/bin:$PATH"' >> ~/.zshrc
+    export GRADLE_HOME="/opt/gradle/gradle-8.4"
+    export PATH="$GRADLE_HOME/bin:$PATH"
+    print_success "Gradle installed successfully"
+else
+    print_warning "Gradle already installed"
+fi
 
-# Install specific Python version
-pyenv install 3.11.5
+print_success "Android SDK and development environment configured successfully"
 
-# Set global Python version
-pyenv global 3.11.5
+# Install some useful zsh plugins
+print_status "Installing useful Oh My Zsh plugins..."
 
-# Set local Python version for project
-pyenv local 3.9.0
-```
+# zsh-autosuggestions
+if [ ! -d "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" ]; then
+    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+fi
 
-### Docker Usage
+# zsh-syntax-highlighting
+if [ ! -d "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" ]; then
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+fi
 
-```bash
-# Basic Docker commands
-docker run hello-world
-docker ps
-docker images
+# Update .zshrc with plugins
+sed -i 's/plugins=(git)/plugins=(git node npm docker docker-compose python pyenv zsh-autosuggestions zsh-syntax-highlighting)/' ~/.zshrc
 
-# Docker Compose
-docker-compose up -d
-docker-compose down
-docker-compose logs
-```
+print_success "Oh My Zsh plugins installed and configured"
 
-## ⚡ Included Aliases
+# Create useful aliases
+print_status "Adding useful aliases to .zshrc..."
+cat >> ~/.zshrc << 'EOF'
 
-### Git Aliases
-```bash
-gs     # git status
-ga     # git add
-gc     # git commit
-gp     # git push
-gl     # git pull
-gd     # git diff
-gb     # git branch
-gco    # git checkout
-```
+# Custom aliases for web development
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
 
-### Docker Aliases
-```bash
-dps    # docker ps
-dpa    # docker ps -a
-di     # docker images
-dsp    # docker system prune
-dc     # docker-compose
-dcu    # docker-compose up
-dcd    # docker-compose down
-dcb    # docker-compose build
-```
-
-### Node/NPM Aliases
-```bash
-nrs    # npm run start
-nrd    # npm run dev
-nrb    # npm run build
-nrt    # npm run test
-ni     # npm install
-nid    # npm install --save-dev
-nig    # npm install -g
-```
-
-### System & Navigation Aliases
-```bash
-ll     # ls -alF
-la     # ls -A
-l      # ls -CF
-..     # cd ..
-...    # cd ../..
-....   # cd ../../..
-back   # cd $OLDPWD (go back to previous directory)
-home   # cd ~ (go to home directory)
-root   # cd / (go to root directory)
-```
-
-### File & Directory Management Aliases
-```bash
-# Directory operations
-md     # mkdir -p (create directories with parent directories)
-rd     # rmdir (remove empty directory)
-rf     # rm -rf (remove directory and contents recursively)
-mkcd   # create directory and cd into it
-
-# File operations
-cp     # cp -i (copy with confirmation)
-mv     # mv -i (move with confirmation)
-rm     # rm -i (remove with confirmation)
-touch  # create empty file
-find   # find . -name (search for files by name)
-size   # du -sh (show directory/file size)
-count  # count files in current directory
+# File and directory management aliases
+alias md='mkdir -p'
+alias rd='rmdir'
+alias rf='rm -rf'
+alias cp='cp -i'
+alias mv='mv -i'
+alias rm='rm -i'
+alias touch='touch'
+alias find='find . -name'
+alias grep='grep --color=auto'
+alias tree='tree -C'
+alias du='du -h'
+alias df='df -h'
+alias size='du -sh'
+alias count='find . -type f | wl -l'
+alias back='cd $OLDPWD'
+alias home='cd ~'
+alias root='cd /'
+alias mkcd='function _mkcd(){ mkdir -p "$1" && cd "$1"; }; _mkcd'
 
 # File permissions
-+x     # chmod +x (make executable)
-755    # chmod 755 (executable permissions)
-644    # chmod 644 (regular file permissions)
-```
+alias +x='chmod +x'
+alias 755='chmod 755'
+alias 644='chmod 644'
 
-### File Viewing & Content Aliases
-```bash
-cat    # cat -n (with line numbers)
-less   # less -R (with colors)
-head   # head -n 20 (first 20 lines)
-tail   # tail -n 20 (last 20 lines)
-tf     # tail -f (follow file changes)
-grep   # grep --color=auto (with colors)
-tree   # tree -C (colorized directory tree)
-du     # du -h (human readable disk usage)
-df     # df -h (human readable filesystem usage)
-```
+# File viewing and editing
+alias cat='cat -n'
+alias less='less -R'
+alias more='more'
+alias head='head -n 20'
+alias tail='tail -n 20'
+alias tf='tail -f'
 
-### Archive Management Aliases
-```bash
-tarzip # tar -czf (create tar.gz archive)
-untar  # tar -xzf (extract tar.gz archive)
-zip    # zip -r (create zip archive recursively)
-unzip  # unzip (extract zip archive)
-```
+# Archive management
+alias tarzip='tar -czf'
+alias untar='tar -xzf'
+alias zip='zip -r'
+alias unzip='unzip'
 
-## 🛠️ Customization
+# Git aliases
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+alias gd='git diff'
+alias gb='git branch'
+alias gco='git checkout'
 
-### Adding More Oh My Zsh Plugins
+# Docker aliases
+alias dps='docker ps'
+alias dpa='docker ps -a'
+alias di='docker images'
+alias dsp='docker system prune'
+alias dc='docker-compose'
+alias dcu='docker-compose up'
+alias dcd='docker-compose down'
+alias dcb='docker-compose build'
 
-Edit your `~/.zshrc` file:
-```bash
-plugins=(git node npm docker docker-compose python pyenv zsh-autosuggestions zsh-syntax-highlighting your-new-plugin)
-```
+# Node/npm aliases
+alias nrs='npm run start'
+alias nrd='npm run dev'
+alias nrb='npm run build'
+alias nrt='npm run test'
+alias ni='npm install'
+alias nid='npm install --save-dev'
+alias nig='npm install -g'
 
-### Configuring Git
+# Android development aliases
+alias adb-devices='adb devices'
+alias adb-logcat='adb logcat'
+alias adb-install='adb install'
+alias adb-uninstall='adb uninstall'
+alias adb-shell='adb shell'
+alias adb-push='adb push'
+alias adb-pull='adb pull'
+alias adb-restart='adb kill-server && adb start-server'
+alias emulator-list='emulator -list-avds'
+alias emulator-start='emulator -avd'
+alias gradle-clean='./gradlew clean'
+alias gradle-build='./gradlew build'
+alias gradle-debug='./gradlew assembleDebug'
+alias gradle-release='./gradlew assembleRelease'
+alias gradle-install='./gradlew installDebug'
+alias react-android='npx react-native run-android'
+alias flutter-devices='flutter devices'
+alias flutter-run='flutter run'
+alias flutter-build='flutter build apk'
+alias flutter-clean='flutter clean'
+alias sdk-update='sdkmanager --update'
+alias sdk-list='sdkmanager --list'
 
-The script will prompt for your Git credentials, but you can also configure manually:
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
-```
+EOF
 
-### Adding Custom Aliases
+print_success "Useful aliases added to .zshrc"
 
-Add to your `~/.zshrc` file:
-```bash
-# Custom aliases
-alias myproject='cd ~/projects/my-awesome-project'
-alias serve='python -m http.server 8000'
-```
-
-## 🔍 Troubleshooting
-
-### Docker Permission Issues
-```bash
-# Add your user to the docker group (already done by script)
-sudo usermod -aG docker $USER
-
-# Restart WSL
-wsl --shutdown
-wsl
-```
-
-### NVM Not Found After Installation
-```bash
-# Reload your shell configuration
-source ~/.zshrc
-# or restart your terminal
-```
-
-### Python/pyenv Issues
-```bash
-# Install Python build dependencies (already done by script)
-sudo apt update
-sudo apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev
-```
-
-### Oh My Zsh Not Loading
-```bash
-# Check if zsh is your default shell
-echo $SHELL
-
-# If not, change it
-chsh -s $(which zsh)
-```
-
-## 📖 Additional Resources
-
-- [WSL Documentation](https://docs.microsoft.com/en-us/windows/wsl/)
-- [Oh My Zsh Documentation](https://ohmyz.sh/)
-- [NVM Documentation](https://github.com/nvm-sh/nvm)
-- [Docker Documentation](https://docs.docker.com/)
-- [pyenv Documentation](https://github.com/pyenv/pyenv)
-- [GitHub CLI Documentation](https://cli.github.com/)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### How to Contribute
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## ⭐ Star History
-
-If this project helped you, please consider giving it a star! ⭐
-
-## 🚨 Disclaimer
-
-This script modifies your system configuration. While it's designed to be safe, please review the code before running it on your system. Always backup important data before running system modification scripts.
-
----
-
-<div align="center">
-
-**Made with ❤️ for the developer community**
-
-[Report Bug](https://github.com/hiurimendes/dev-setup-wsl/issues) · [Request Feature](https://github.com/hiurimendes/dev-setup-wsl/issues) · [Contribute](https://github.com/hiurimendes/dev-setup-wsl/pulls)
-
-</div>
+# Final message
+echo ""
+echo "🎉 WSL Ubuntu Web Development Environment Setup Complete!"
+echo ""
+print_success "Installed tools:"
+echo "  ✅ Oh My Zsh with useful plugins"
+echo "  ✅ NVM with Node.js LTS"
+echo "  ✅ Docker with Docker Compose"
+echo "  ✅ pyenv with latest stable Python"
+echo "  ✅ Git (configured)"
+echo "  ✅ GitHub CLI"
+echo "  ✅ Android SDK with command line tools"
+echo "  ✅ Gradle build system"
+echo "  ✅ Java 17 JDK"
+echo "  ✅ Useful aliases and configurations"
+echo ""
+print_warning "Important notes:"
+echo "  🔄 Please restart your terminal or run 'exec zsh' to apply all changes"
+echo "  🐳 You may need to restart WSL for Docker to work properly: wsl --shutdown && wsl"
+echo "  🔐 Run 'gh auth login' to authenticate with GitHub"
+echo "  🤖 Android SDK synchronized with Windows Android Studio (if found)"
+echo "  📱 Use 'adb devices' to check connected Android devices"
+echo "  🐍 Python version: $(python --version 2>/dev/null || echo 'Restart terminal first')"
+echo "  📦 Node version: $(node --version 2>/dev/null || echo 'Restart terminal first')"
+echo "  ☕ Java version: $(java --version 2>/dev/null | head -1 || echo 'Restart terminal first')"
+echo ""
+print_status "Happy coding! 🚀"
