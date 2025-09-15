@@ -189,12 +189,42 @@ else
     print_warning "GitHub CLI already installed"
 fi
 
+# Install SDKMAN! (Software Development Kit Manager)
+print_status "Installing SDKMAN! (Software Development Kit Manager)..."
+if [ ! -d "$HOME/.sdkman" ]; then
+    curl -s "https://get.sdkman.io" | bash
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    
+    # Add SDKMAN to zshrc
+    echo '' >> ~/.zshrc
+    echo '# SDKMAN Configuration' >> ~/.zshrc
+    echo 'export SDKMAN_DIR="$HOME/.sdkman"' >> ~/.zshrc
+    echo '[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"' >> ~/.zshrc
+    
+    print_success "SDKMAN! installed successfully"
+else
+    print_warning "SDKMAN! already installed"
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+fi
+
+# Install Java 21 using SDKMAN! (compatible with CapacitorJS)
+print_status "Installing Java 21 using SDKMAN! (CapacitorJS compatible)..."
+# Source SDKMAN! for this session to use sdk command
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# Check if Java 21 is already installed
+if ! bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk list java" | grep -q "21.*installed"; then
+    # Install Amazon Corretto 21 (recommended for Android development)
+    bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk install java 21.0.4-amzn"
+    bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk default java 21.0.4-amzn"
+    print_success "Java 21 (Amazon Corretto) installed and set as default"
+else
+    print_warning "Java 21 already installed via SDKMAN!"
+    bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && sdk default java 21.0.4-amzn" 2>/dev/null || true
+fi
+
 # Install Android SDK and set up Android development environment
 print_status "Setting up Android SDK for development..."
-
-# Install Java 17 (required for latest Android SDK)
-sudo apt update
-sudo apt install -y openjdk-17-jdk
 
 # Install Android SDK command line tools
 print_status "Installing Android SDK Command Line Tools..."
@@ -218,7 +248,7 @@ echo 'export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> ~/.zshrc
 echo 'export PATH="$ANDROID_HOME/platform-tools:$PATH"' >> ~/.zshrc
 echo 'export PATH="$ANDROID_HOME/build-tools:$PATH"' >> ~/.zshrc
 echo 'export PATH="$ANDROID_HOME/emulator:$PATH"' >> ~/.zshrc
-echo 'export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"' >> ~/.zshrc
+echo '# JAVA_HOME will be automatically set by SDKMAN!' >> ~/.zshrc
 
 # Load Android environment for current session
 export ANDROID_HOME="$HOME/Android/Sdk"
@@ -227,14 +257,14 @@ export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 export PATH="$ANDROID_HOME/build-tools:$PATH"
 export PATH="$ANDROID_HOME/emulator:$PATH"
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+# JAVA_HOME will be set by SDKMAN! when sourced
 
 # Accept Android SDK licenses
-yes | sdkmanager --licenses >/dev/null 2>&1
+yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null 2>&1
 
 # Install essential Android SDK components
 print_status "Installing essential Android SDK components..."
-sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34" "system-images;android-34;google_apis;x86_64"
+$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34" "system-images;android-34;google_apis;x86_64"
 
 # Create symbolic link to Windows Android Studio SDK (if exists)
 WINDOWS_ANDROID_SDK="/mnt/c/Users/$USER/AppData/Local/Android/Sdk"
@@ -317,7 +347,7 @@ alias tree='tree -C'
 alias du='du -h'
 alias df='df -h'
 alias size='du -sh'
-alias count='find . -type f | wl -l'
+alias count='find . -type f | wc -l'
 alias back='cd $OLDPWD'
 alias home='cd ~'
 alias root='cd /'
@@ -371,6 +401,17 @@ alias ni='npm install'
 alias nid='npm install --save-dev'
 alias nig='npm install -g'
 
+# SDKMAN! aliases
+alias sdk-list='sdk list'
+alias sdk-current='sdk current'
+alias sdk-use='sdk use'
+alias sdk-install='sdk install'
+alias sdk-uninstall='sdk uninstall'
+alias sdk-default='sdk default'
+alias sdk-update='sdk update'
+alias java-version='java -version'
+alias javac-version='javac -version'
+
 # Android development aliases
 alias adb-devices='adb devices'
 alias adb-logcat='adb logcat'
@@ -392,8 +433,8 @@ alias flutter-devices='flutter devices'
 alias flutter-run='flutter run'
 alias flutter-build='flutter build apk'
 alias flutter-clean='flutter clean'
-alias sdk-update='sdkmanager --update'
-alias sdk-list='sdkmanager --list'
+alias sdk-manager-update='sdkmanager --update'
+alias sdk-manager-list='sdkmanager --list'
 
 EOF
 
@@ -410,9 +451,10 @@ echo "  ✅ Docker with Docker Compose"
 echo "  ✅ pyenv with latest stable Python"
 echo "  ✅ Git (configured)"
 echo "  ✅ GitHub CLI"
+echo "  ✅ SDKMAN! (Software Development Kit Manager)"
+echo "  ✅ Java 21 (Amazon Corretto) - CapacitorJS compatible"
 echo "  ✅ Android SDK with command line tools"
 echo "  ✅ Gradle build system"
-echo "  ✅ Java 17 JDK"
 echo "  ✅ Useful aliases and configurations"
 echo ""
 print_warning "Important notes:"
@@ -421,8 +463,10 @@ echo "  🐳 You may need to restart WSL for Docker to work properly: wsl --shut
 echo "  🔐 Run 'gh auth login' to authenticate with GitHub"
 echo "  🤖 Android SDK synchronized with Windows Android Studio (if found)"
 echo "  📱 Use 'adb devices' to check connected Android devices"
-echo "  🐍 Python version: $(python --version 2>/dev/null || echo 'Restart terminal first')"
+echo "  ☕ Use 'sdk list java' to see available Java versions"
+echo "  � Java 21 is CapacitorJS compatible and set as default"
+echo "  �🐍 Python version: $(python --version 2>/dev/null || echo 'Restart terminal first')"
 echo "  📦 Node version: $(node --version 2>/dev/null || echo 'Restart terminal first')"
-echo "  ☕ Java version: $(java --version 2>/dev/null | head -1 || echo 'Restart terminal first')"
+echo "  ☕ Java version: $(java -version 2>&1 | head -1 || echo 'Restart terminal first')"
 echo ""
 print_status "Happy coding! 🚀"

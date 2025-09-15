@@ -6,10 +6,11 @@
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Java](https://img.shields.io/badge/Java%2021-ED8B00?style=for-the-badge&logo=java&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white)
 
-*Complete automated setup for WSL Ubuntu development environment with Android SDK integration*
+*Complete automated setup for WSL Ubuntu development environment with Android SDK integration and CapacitorJS compatibility*
 
 </div>
 
@@ -30,7 +31,8 @@ This script transforms your WSL Ubuntu into a powerful development environment w
 
 ### Containerization & Build Tools
 - 🐳 **Docker + Docker Compose** - Complete containerization stack
-- ☕ **Java 17 JDK** - Latest Java development kit
+- 🛠️ **SDKMAN!** - Software Development Kit Manager for Java and related tools
+- ☕ **Java 21 (Amazon Corretto)** - CapacitorJS compatible Java runtime
 - 🏗️ **Gradle** - Modern build automation tool
 
 ### Mobile Development
@@ -49,7 +51,7 @@ This script transforms your WSL Ubuntu into a powerful development environment w
 
 ### One-Command Setup
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hiurimendes/dev-setup-wsl/main/setup-wsl-dev.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hiurimendes/dev-setup-wsl/main/setup.sh | bash
 ```
 
 ### Manual Installation
@@ -59,8 +61,8 @@ git clone https://github.com/hiurimendes/dev-setup-wsl.git
 cd dev-setup-wsl
 
 # Make executable and run
-chmod +x setup-wsl-dev.sh
-./setup-wsl-dev.sh
+chmod +x setup.sh
+./setup.sh
 ```
 
 ---
@@ -98,6 +100,7 @@ node --version
 python --version
 docker --version
 java --version
+sdk version
 adb --version
 ```
 
@@ -144,6 +147,27 @@ docker-compose down
 docker-compose logs -f
 ```
 
+### Java Development with SDKMAN!
+```bash
+# List available Java versions
+sdk list java
+
+# Install different Java versions
+sdk install java 17.0.8-amzn
+sdk install java 21.0.4-amzn
+
+# Switch Java versions
+sdk use java 17.0.8-amzn
+sdk use java 21.0.4-amzn
+
+# Set default Java version
+sdk default java 21.0.4-amzn
+
+# Check current Java version
+sdk current java
+java --version
+```
+
 ### Android Development
 ```bash
 # Device management
@@ -158,9 +182,40 @@ emulator -avd Pixel_4_API_34
 # Build operations
 ./gradlew assembleDebug
 ./gradlew installDebug
+```
 
-# Framework-specific
+### CapacitorJS Development
+```bash
+# Initialize Capacitor project
+npm install @capacitor/core @capacitor/cli
+npx cap init
+
+# Add Android platform
+npx cap add android
+
+# Build and sync
+npm run build
+npx cap sync android
+
+# Open in Android Studio
+npx cap open android
+
+# Run on device/emulator
+npx cap run android
+
+# Live reload development
+npx cap run android --livereload --external
+
+# Check environment
+npx cap doctor
+```
+
+### Other Mobile Frameworks
+```bash
+# React Native
 npx react-native run-android
+
+# Flutter
 flutter devices && flutter run
 ```
 
@@ -192,7 +247,7 @@ rm ~/Android/Sdk
 mv ~/Android/Sdk.backup ~/Android/Sdk
 
 # Re-run synchronization
-./setup-wsl-dev.sh
+./setup.sh
 ```
 
 ---
@@ -316,9 +371,20 @@ flutter-run     # flutter run
 flutter-build   # flutter build apk
 flutter-clean   # flutter clean
 
-# SDK Management
-sdk-update      # sdkmanager --update
-sdk-list        # sdkmanager --list
+# SDKMAN! Management
+sdk-list        # sdk list
+sdk-current     # sdk current
+sdk-use         # sdk use
+sdk-install     # sdk install
+sdk-uninstall   # sdk uninstall
+sdk-default     # sdk default
+sdk-update      # sdk update
+java-version    # java -version
+javac-version   # javac -version
+
+# Android SDK Management
+sdk-manager-update  # sdkmanager --update
+sdk-manager-list    # sdkmanager --list
 ```
 
 ---
@@ -375,14 +441,32 @@ adb kill-server && adb start-server
 rm ~/Android/Sdk && mv ~/Android/Sdk.backup ~/Android/Sdk
 ```
 
+#### SDKMAN! Issues
+```bash
+# Reload SDKMAN!
+source ~/.sdkman/bin/sdkman-init.sh
+
+# Check SDKMAN! installation
+sdk version
+
+# List installed Java versions
+sdk list java
+
+# Check current Java version
+sdk current java
+```
+
 #### Gradle Build Failures
 ```bash
 # Clean and rebuild
 ./gradlew clean
 ./gradlew build --refresh-dependencies
 
-# Check Java version (should be 17+)
+# Check Java version (should be 21+ for CapacitorJS)
 java --version
+
+# Switch Java version if needed
+sdk use java 21.0.4-amzn
 ```
 
 ### Performance Tips
@@ -432,14 +516,19 @@ git config --global init.defaultBranch main
 - [NVM Documentation](https://github.com/nvm-sh/nvm)
 - [Docker Documentation](https://docs.docker.com/)
 - [pyenv Documentation](https://github.com/pyenv/pyenv)
+- [SDKMAN! Documentation](https://sdkman.io/)
 - [GitHub CLI Documentation](https://cli.github.com/)
 - [Android Developer Documentation](https://developer.android.com/)
 - [Gradle Documentation](https://gradle.org/guides/)
 
-### Community & Learning
+### Mobile Development Frameworks
+- [CapacitorJS Documentation](https://capacitorjs.com/docs) - Hybrid mobile apps with Java 21 support
 - [React Native Getting Started](https://reactnative.dev/docs/environment-setup)
 - [Flutter Development Setup](https://flutter.dev/docs/get-started)
+
+### Additional Resources
 - [Docker Best Practices](https://docs.docker.com/develop/best-practices/)
+- [SDKMAN! Usage Guide](https://sdkman.io/usage)
 
 ---
 
