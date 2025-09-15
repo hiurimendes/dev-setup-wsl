@@ -192,9 +192,32 @@ fi
 # Install Android SDK and set up Android development environment
 print_status "Setting up Android SDK for development..."
 
-# Install Java 17 (required for latest Android SDK)
-sudo apt update
-sudo apt install -y openjdk-17-jdk
+# Install SDKMAN! (Java Version Manager) and Java 21
+print_status "Installing SDKMAN! (Java Version Manager)..."
+if [ ! -d "$HOME/.sdkman" ]; then
+    curl -s "https://get.sdkman.io" | bash
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    
+    # Add SDKMAN! to shell profiles
+    echo 'export SDKMAN_DIR="$HOME/.sdkman"' >> ~/.zshrc
+    echo '[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"' >> ~/.zshrc
+    
+    # Install Java 21 (required for modern Android SDK and applications)
+    print_status "Installing Java 21 via SDKMAN!..."
+    sdk install java 21.0.1-tem
+    sdk default java 21.0.1-tem
+    
+    print_success "SDKMAN! and Java 21 installed successfully"
+else
+    print_warning "SDKMAN! already installed"
+    # Ensure Java 21 is available
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    if ! sdk list java | grep -q "21.0.1-tem"; then
+        print_status "Installing Java 21..."
+        sdk install java 21.0.1-tem
+        sdk default java 21.0.1-tem
+    fi
+fi
 
 # Install Android SDK command line tools
 print_status "Installing Android SDK Command Line Tools..."
@@ -218,7 +241,7 @@ echo 'export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> ~/.zshrc
 echo 'export PATH="$ANDROID_HOME/platform-tools:$PATH"' >> ~/.zshrc
 echo 'export PATH="$ANDROID_HOME/build-tools:$PATH"' >> ~/.zshrc
 echo 'export PATH="$ANDROID_HOME/emulator:$PATH"' >> ~/.zshrc
-echo 'export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"' >> ~/.zshrc
+echo 'export JAVA_HOME="$HOME/.sdkman/candidates/java/current"' >> ~/.zshrc
 
 # Load Android environment for current session
 export ANDROID_HOME="$HOME/Android/Sdk"
@@ -227,7 +250,7 @@ export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 export PATH="$ANDROID_HOME/build-tools:$PATH"
 export PATH="$ANDROID_HOME/emulator:$PATH"
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+export JAVA_HOME="$HOME/.sdkman/candidates/java/current"
 
 # Accept Android SDK licenses
 yes | sdkmanager --licenses >/dev/null 2>&1
@@ -395,6 +418,16 @@ alias flutter-clean='flutter clean'
 alias sdk-update='sdkmanager --update'
 alias sdk-list='sdkmanager --list'
 
+# Java version management with SDKMAN!
+alias java-list='sdk list java'
+alias java-install='sdk install java'
+alias java-use='sdk use java'
+alias java-default='sdk default java'
+alias java-current='sdk current java'
+alias java-version='java --version'
+alias sdkman-update='sdk update'
+alias sdkman-version='sdk version'
+
 EOF
 
 print_success "Useful aliases added to .zshrc"
@@ -412,7 +445,7 @@ echo "  ✅ Git (configured)"
 echo "  ✅ GitHub CLI"
 echo "  ✅ Android SDK with command line tools"
 echo "  ✅ Gradle build system"
-echo "  ✅ Java 17 JDK"
+echo "  ✅ SDKMAN! with Java 21"
 echo "  ✅ Useful aliases and configurations"
 echo ""
 print_warning "Important notes:"

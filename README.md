@@ -30,7 +30,7 @@ This script transforms your WSL Ubuntu into a powerful development environment w
 
 ### Containerization & Build Tools
 - 🐳 **Docker + Docker Compose** - Complete containerization stack
-- ☕ **Java 17 JDK** - Latest Java development kit
+- ☕ **SDKMAN! + Java 21** - Java version manager with latest LTS Java
 - 🏗️ **Gradle** - Modern build automation tool
 
 ### Mobile Development
@@ -119,6 +119,30 @@ yarn install
 yarn dev
 ```
 
+### Java Development
+```bash
+# List available Java versions
+sdk list java
+
+# Install specific Java version
+sdk install java 21.0.1-tem
+sdk install java 17.0.9-tem
+sdk install java 11.0.21-tem
+
+# Switch Java version for current session
+sdk use java 21.0.1-tem
+
+# Set default Java version
+sdk default java 21.0.1-tem
+
+# Check current Java version
+sdk current java
+java --version
+
+# Update SDKMAN! itself
+sdk update
+```
+
 ### Python Development
 ```bash
 # Install and manage Python versions
@@ -162,6 +186,56 @@ emulator -avd Pixel_4_API_34
 # Framework-specific
 npx react-native run-android
 flutter devices && flutter run
+```
+
+---
+
+## ☕ Java Version Management with SDKMAN!
+
+SDKMAN! is a powerful tool for managing multiple Java versions. This setup installs Java 21 by default, which is required for modern Android development and applications.
+
+### Common Java Version Commands
+```bash
+# List all available Java versions
+java-list
+
+# Install a specific Java version
+java-install 21.0.1-tem
+java-install 17.0.9-tem
+
+# Switch Java version for current session
+java-use 21.0.1-tem
+
+# Set default Java version globally
+java-default 21.0.1-tem
+
+# Check current active Java version
+java-current
+java-version
+```
+
+### Why Java 21?
+- **Latest LTS**: Long-term support with enhanced performance
+- **Android Compatibility**: Required for latest Android SDK tools
+- **Modern Features**: Improved garbage collection and language features
+- **Security**: Latest security patches and improvements
+
+### Managing Multiple Java Versions
+```bash
+# Install multiple versions for different projects
+sdk install java 21.0.1-tem    # Latest LTS
+sdk install java 17.0.9-tem    # Previous LTS
+sdk install java 11.0.21-tem   # Legacy LTS
+
+# Project-specific Java version (per terminal session)
+cd my-java-17-project
+sdk use java 17.0.9-tem
+
+cd my-java-21-project  
+sdk use java 21.0.1-tem
+
+# Check which version is active
+sdk current java
 ```
 
 ---
@@ -319,6 +393,16 @@ flutter-clean   # flutter clean
 # SDK Management
 sdk-update      # sdkmanager --update
 sdk-list        # sdkmanager --list
+
+# Java Version Management (SDKMAN!)
+java-list       # sdk list java
+java-install    # sdk install java
+java-use        # sdk use java
+java-default    # sdk default java
+java-current    # sdk current java
+java-version    # java --version
+sdkman-update   # sdk update
+sdkman-version  # sdk version
 ```
 
 ---
@@ -381,8 +465,27 @@ rm ~/Android/Sdk && mv ~/Android/Sdk.backup ~/Android/Sdk
 ./gradlew clean
 ./gradlew build --refresh-dependencies
 
-# Check Java version (should be 17+)
+# Check Java version (should be 21+)
 java --version
+sdk current java
+
+# Switch to correct Java version if needed
+sdk use java 21.0.1-tem
+```
+
+#### SDKMAN! Issues
+```bash
+# Reload SDKMAN! environment
+source ~/.sdkman/bin/sdkman-init.sh
+
+# Update SDKMAN! itself
+sdk update
+
+# Check SDKMAN! installation
+sdk version
+
+# List installed Java versions
+sdk list java
 ```
 
 ### Performance Tips
