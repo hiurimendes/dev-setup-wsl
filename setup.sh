@@ -37,7 +37,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Install essential packages
 print_status "Installing essential packages..."
-sudo apt install -y curl wget git build-essential software-properties-common apt-transport-https ca-certificates gnupg lsb-release zsh
+sudo apt install -y curl wget git build-essential software-properties-common apt-transport-https ca-certificates gnupg lsb-release zsh unzip
 
 # Install Oh My Zsh
 print_status "Installing Oh My Zsh..."
