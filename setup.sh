@@ -189,6 +189,90 @@ else
     print_warning "GitHub CLI already installed"
 fi
 
+# Install Android SDK and set up Android development environment
+print_status "Setting up Android SDK for development..."
+
+# Install Java 17 (required for latest Android SDK)
+sudo apt update
+sudo apt install -y openjdk-17-jdk
+
+# Install Android SDK command line tools
+print_status "Installing Android SDK Command Line Tools..."
+ANDROID_HOME="$HOME/Android/Sdk"
+mkdir -p "$ANDROID_HOME"
+
+# Download and install command line tools
+cd /tmp
+wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+unzip commandlinetools-linux-9477386_latest.zip
+mkdir -p "$ANDROID_HOME/cmdline-tools/latest"
+mv cmdline-tools/* "$ANDROID_HOME/cmdline-tools/latest/"
+rm -rf cmdline-tools commandlinetools-linux-9477386_latest.zip
+
+# Set up Android environment variables
+echo '' >> ~/.zshrc
+echo '# Android SDK Configuration' >> ~/.zshrc
+echo 'export ANDROID_HOME="$HOME/Android/Sdk"' >> ~/.zshrc
+echo 'export ANDROID_SDK_ROOT="$ANDROID_HOME"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/platform-tools:$PATH"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/build-tools:$PATH"' >> ~/.zshrc
+echo 'export PATH="$ANDROID_HOME/emulator:$PATH"' >> ~/.zshrc
+echo 'export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"' >> ~/.zshrc
+
+# Load Android environment for current session
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+export PATH="$ANDROID_HOME/build-tools:$PATH"
+export PATH="$ANDROID_HOME/emulator:$PATH"
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+
+# Accept Android SDK licenses
+yes | sdkmanager --licenses >/dev/null 2>&1
+
+# Install essential Android SDK components
+print_status "Installing essential Android SDK components..."
+sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34" "system-images;android-34;google_apis;x86_64"
+
+# Create symbolic link to Windows Android Studio SDK (if exists)
+WINDOWS_ANDROID_SDK="/mnt/c/Users/$USER/AppData/Local/Android/Sdk"
+if [ -d "$WINDOWS_ANDROID_SDK" ]; then
+    print_status "Found Windows Android Studio SDK, creating symbolic links..."
+    
+    # Create backup of WSL Android directory
+    if [ -d "$ANDROID_HOME" ]; then
+        mv "$ANDROID_HOME" "${ANDROID_HOME}.backup"
+    fi
+    
+    # Create symbolic link to Windows SDK
+    ln -sf "$WINDOWS_ANDROID_SDK" "$ANDROID_HOME"
+    
+    print_success "Android SDK synchronized with Windows Android Studio"
+    print_warning "Note: You can switch back to WSL-only SDK by removing the symlink:"
+    print_warning "rm $ANDROID_HOME && mv ${ANDROID_HOME}.backup $ANDROID_HOME"
+else
+    print_warning "Windows Android Studio SDK not found at $WINDOWS_ANDROID_SDK"
+    print_success "Using WSL-only Android SDK installation"
+fi
+
+# Install Gradle (for Android builds)
+print_status "Installing Gradle..."
+if ! command -v gradle &> /dev/null; then
+    wget https://services.gradle.org/distributions/gradle-8.4-bin.zip -P /tmp
+    sudo unzip -d /opt/gradle /tmp/gradle-8.4-bin.zip
+    echo 'export GRADLE_HOME="/opt/gradle/gradle-8.4"' >> ~/.zshrc
+    echo 'export PATH="$GRADLE_HOME/bin:$PATH"' >> ~/.zshrc
+    export GRADLE_HOME="/opt/gradle/gradle-8.4"
+    export PATH="$GRADLE_HOME/bin:$PATH"
+    print_success "Gradle installed successfully"
+else
+    print_warning "Gradle already installed"
+fi
+
+print_success "Android SDK and development environment configured successfully"
+
 # Install some useful zsh plugins
 print_status "Installing useful Oh My Zsh plugins..."
 
@@ -287,6 +371,30 @@ alias ni='npm install'
 alias nid='npm install --save-dev'
 alias nig='npm install -g'
 
+# Android development aliases
+alias adb-devices='adb devices'
+alias adb-logcat='adb logcat'
+alias adb-install='adb install'
+alias adb-uninstall='adb uninstall'
+alias adb-shell='adb shell'
+alias adb-push='adb push'
+alias adb-pull='adb pull'
+alias adb-restart='adb kill-server && adb start-server'
+alias emulator-list='emulator -list-avds'
+alias emulator-start='emulator -avd'
+alias gradle-clean='./gradlew clean'
+alias gradle-build='./gradlew build'
+alias gradle-debug='./gradlew assembleDebug'
+alias gradle-release='./gradlew assembleRelease'
+alias gradle-install='./gradlew installDebug'
+alias react-android='npx react-native run-android'
+alias flutter-devices='flutter devices'
+alias flutter-run='flutter run'
+alias flutter-build='flutter build apk'
+alias flutter-clean='flutter clean'
+alias sdk-update='sdkmanager --update'
+alias sdk-list='sdkmanager --list'
+
 EOF
 
 print_success "Useful aliases added to .zshrc"
@@ -302,13 +410,19 @@ echo "  ✅ Docker with Docker Compose"
 echo "  ✅ pyenv with latest stable Python"
 echo "  ✅ Git (configured)"
 echo "  ✅ GitHub CLI"
+echo "  ✅ Android SDK with command line tools"
+echo "  ✅ Gradle build system"
+echo "  ✅ Java 17 JDK"
 echo "  ✅ Useful aliases and configurations"
 echo ""
 print_warning "Important notes:"
 echo "  🔄 Please restart your terminal or run 'exec zsh' to apply all changes"
 echo "  🐳 You may need to restart WSL for Docker to work properly: wsl --shutdown && wsl"
 echo "  🔐 Run 'gh auth login' to authenticate with GitHub"
+echo "  🤖 Android SDK synchronized with Windows Android Studio (if found)"
+echo "  📱 Use 'adb devices' to check connected Android devices"
 echo "  🐍 Python version: $(python --version 2>/dev/null || echo 'Restart terminal first')"
 echo "  📦 Node version: $(node --version 2>/dev/null || echo 'Restart terminal first')"
+echo "  ☕ Java version: $(java --version 2>/dev/null | head -1 || echo 'Restart terminal first')"
 echo ""
 print_status "Happy coding! 🚀"
