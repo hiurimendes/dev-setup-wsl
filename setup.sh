@@ -324,7 +324,7 @@ alias root='cd /'
 alias mkcd='function _mkcd(){ mkdir -p "$1" && cd "$1"; }; _mkcd'
 
 # File permissions
-alias +x='chmod +x'
+alias chx='chmod +x'
 alias 755='chmod 755'
 alias 644='chmod 644'
 
