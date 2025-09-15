@@ -51,8 +51,23 @@ fi
 # Change default shell to zsh
 print_status "Setting zsh as default shell..."
 if [ "$SHELL" != "/usr/bin/zsh" ]; then
-    chsh -s $(which zsh)
-    print_success "Default shell changed to zsh (restart terminal to take effect)"
+    if chsh -s $(which zsh) 2>/dev/null; then
+        print_success "Default shell changed to zsh (restart terminal to take effect)"
+    else
+        print_warning "Could not change default shell automatically. You can change it manually later with:"
+        print_warning "sudo chsh -s \$(which zsh) \$USER"
+        print_warning "Or add 'exec zsh' to your .bashrc to auto-start zsh"
+        
+        # Add exec zsh to bashrc as fallback
+        if ! grep -q "exec zsh" ~/.bashrc 2>/dev/null; then
+            echo "" >> ~/.bashrc
+            echo "# Auto-start zsh if available" >> ~/.bashrc
+            echo "if [ -x /usr/bin/zsh ]; then" >> ~/.bashrc
+            echo "    exec zsh" >> ~/.bashrc
+            echo "fi" >> ~/.bashrc
+            print_status "Added auto-start zsh to .bashrc as fallback"
+        fi
+    fi
 else
     print_warning "Zsh is already the default shell"
 fi
