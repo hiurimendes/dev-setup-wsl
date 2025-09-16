@@ -139,9 +139,6 @@ setup_kvm_permissions() {
     fi
 }
 
-# Verificar GPU e drivers
-
-
 # Instalar SDKMAN! e Java 21
 install_java_sdkman() {
     info "Instalando SDKMAN!..."
