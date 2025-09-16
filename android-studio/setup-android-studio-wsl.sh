@@ -85,12 +85,28 @@ install_java_sdkman() {
 
 # Instalar Android Studio
 install_android_studio() {
-    info "Baixando Android Studio..."
+    info "Baixando Android Studio (versão mais recente)..."
     mkdir -p ~/Android/Sdk
     cd /tmp
     
-    STUDIO_URL="https://redirector.gvt1.com/edgedl/android/studio/ide-zips/2023.1.1.28/android-studio-2023.1.1.28-linux.tar.gz"
-    wget -q -O android-studio.tar.gz "$STUDIO_URL"
+    # URL oficial da versão mais recente (2025.1.3.7)
+    STUDIO_URL="https://redirector.gvt1.com/edgedl/android/studio/ide-zips/2025.1.3.7/android-studio-2025.1.3.7-linux.tar.gz"
+    
+    info "Download iniciando... (pode levar alguns minutos - ~1.5GB)"
+    
+    # Download com progress bar e retry
+    if ! wget --progress=bar:force:noscroll -O android-studio.tar.gz "$STUDIO_URL" 2>&1; then
+        error "Falha no download. Tentando URL alternativa..."
+        
+        # Fallback para URL direta do Google
+        ALT_URL="https://dl.google.com/dl/android/studio/ide-zips/2025.1.3.7/android-studio-2025.1.3.7-linux.tar.gz"
+        
+        if ! wget --progress=bar:force:noscroll -O android-studio.tar.gz "$ALT_URL" 2>&1; then
+            error "Download falhou. Verifique sua conexão de internet."
+            error "Tente baixar manualmente de: https://developer.android.com/studio"
+            exit 1
+        fi
+    fi
     
     info "Instalando Android Studio..."
     tar -xzf android-studio.tar.gz -C ~/
@@ -105,7 +121,16 @@ install_sdk() {
     export ANDROID_HOME=$HOME/Android/Sdk
     
     cd /tmp
-    wget -q -O cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+    
+    # URL atualizada do Command Line Tools (versão mais recente)
+    CMDTOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip"
+    
+    info "Baixando Android Command Line Tools..."
+    if ! wget --progress=bar:force:noscroll -O cmdtools.zip "$CMDTOOLS_URL" 2>&1; then
+        error "Falha no download do Command Line Tools"
+        exit 1
+    fi
+    
     unzip -q cmdtools.zip
     mkdir -p $ANDROID_HOME/cmdline-tools/latest
     mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
