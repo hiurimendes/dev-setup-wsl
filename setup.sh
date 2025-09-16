@@ -165,9 +165,15 @@ if [ ! -d "$HOME/.pyenv" ]; then
     echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
     echo 'eval "$(pyenv init -)"' >> ~/.zshrc
     
+    # Also add to bashrc for bash users
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+    
     # Load pyenv for current session
     export PYENV_ROOT="$HOME/.pyenv"
-    command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init --path)"
     eval "$(pyenv init -)"
     
     # Install latest stable Python
@@ -403,16 +409,16 @@ alias tree='tree -C'
 alias du='du -h'
 alias df='df -h'
 alias size='du -sh'
-alias count='find . -type f | wl -l'
+alias count='find . -type f | wc -l'
 alias back='cd $OLDPWD'
 alias home='cd ~'
 alias root='cd /'
 alias mkcd='function _mkcd(){ mkdir -p "$1" && cd "$1"; }; _mkcd'
 
 # File permissions
-alias +x='chmod +x'
-alias 755='chmod 755'
-alias 644='chmod 644'
+alias executable='chmod +x'
+alias perm755='chmod 755'
+alias perm644='chmod 644'
 
 # File viewing and editing
 alias cat='cat -n'
