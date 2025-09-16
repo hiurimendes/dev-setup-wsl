@@ -238,158 +238,12 @@ if [ ! -d "$HOME/.sdkman" ]; then
     sdk install java 21.0.1-tem
     sdk default java 21.0.1-tem
     
-    # Install Gradle via SDKMAN
-    print_status "Installing Gradle via SDKMAN..."
-    sdk install gradle 8.5
-    sdk default gradle 8.5
-    
-    print_success "SDKMAN!, Java 21, and Gradle installed successfully"
+    print_success "SDKMAN! and Java 21 installed successfully"
 else
     print_warning "SDKMAN! already installed"
 fi
 
-# Set up Android development environment prioritizing Windows Android Studio integration
-print_status "Setting up Android development environment..."
 
-# Define possible paths for Windows Android Studio detection
-WINDOWS_USER_HOME="/mnt/c/Users/$USER"
-POSSIBLE_SDK_PATHS=(
-    "/mnt/c/Users/$USER/AppData/Local/Android/Sdk"
-    "/mnt/c/Android/Sdk"
-    "/mnt/c/Program Files/Android/Android Studio/sdk"
-    "/mnt/c/Program Files (x86)/Android/Android Studio/sdk"
-    "/mnt/c/Users/$USER/Android/Sdk"
-    "/mnt/c/tools/android-sdk"
-    "/mnt/c/android-sdk-windows"
-)
-
-# Check for Windows Android Studio installation
-print_status "Checking for Windows Android Studio installation..."
-print_status "Searching in multiple possible locations..."
-
-WINDOWS_ANDROID_SDK=""
-for sdk_path in "${POSSIBLE_SDK_PATHS[@]}"; do
-    print_status "Checking: $sdk_path"
-    if [ -d "$sdk_path" ]; then
-        WINDOWS_ANDROID_SDK="$sdk_path"
-        break
-    fi
-done
-
-if [ -n "$WINDOWS_ANDROID_SDK" ]; then
-    print_success "Windows Android Studio SDK found! Setting up WSL integration..."
-    
-    # Set up Android environment to use Windows SDK
-    ANDROID_HOME="$WINDOWS_ANDROID_SDK"
-    ANDROID_SDK_ROOT="$ANDROID_HOME"
-    
-    # Create WSL symlink for easier access
-    mkdir -p "$HOME/Android"
-    if [ ! -L "$HOME/Android/Sdk" ]; then
-        ln -sf "$WINDOWS_ANDROID_SDK" "$HOME/Android/Sdk"
-    fi
-    
-    # Add Windows Android tools to PATH and environment
-    echo '' >> ~/.zshrc
-    echo '# Android SDK Configuration (Windows Integration)' >> ~/.zshrc
-    echo "export ANDROID_HOME=\"$WINDOWS_ANDROID_SDK\"" >> ~/.zshrc
-    echo 'export ANDROID_SDK_ROOT="$ANDROID_HOME"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/platform-tools:$PATH"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/build-tools:$PATH"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/tools:$PATH"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/tools/bin:$PATH"' >> ~/.zshrc
-    
-    # Create wrapper scripts for Windows Android tools
-    mkdir -p "$HOME/.local/bin"
-    
-    # ADB wrapper that works with Windows paths
-    cat > "$HOME/.local/bin/adb" << EOF
-#!/bin/bash
-exec "$WINDOWS_ANDROID_SDK/platform-tools/adb.exe" "\$@"
-EOF
-    chmod +x "$HOME/.local/bin/adb"
-    
-    # Emulator wrapper (note: GUI emulators won't work in WSL, but command works)
-    cat > "$HOME/.local/bin/emulator" << EOF
-#!/bin/bash
-echo "⚠️  GUI emulators don't work in WSL. Use Windows Android Studio to run emulators."
-echo "💡 Tip: Start emulator in Windows, then use 'adb devices' in WSL to connect."
-echo "🔧 Available emulators:"
-exec "$WINDOWS_ANDROID_SDK/emulator/emulator.exe" -list-avds
-EOF
-    chmod +x "$HOME/.local/bin/emulator"
-    
-    # AVD Manager wrapper
-    cat > "$HOME/.local/bin/avdmanager" << EOF
-#!/bin/bash
-exec "$WINDOWS_ANDROID_SDK/cmdline-tools/latest/bin/avdmanager.bat" "\$@"
-EOF
-    chmod +x "$HOME/.local/bin/avdmanager"
-    
-    # SDK Manager wrapper  
-    cat > "$HOME/.local/bin/sdkmanager" << EOF
-#!/bin/bash
-exec "$WINDOWS_ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager.bat" "\$@"
-EOF
-    chmod +x "$HOME/.local/bin/sdkmanager"
-    
-    # Add local bin to PATH
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-    
-    print_success "Android SDK integrated with Windows Android Studio"
-    print_success "📍 Found Android SDK at: $WINDOWS_ANDROID_SDK"
-    print_success "✅ ADB commands will work seamlessly"
-    print_success "✅ SDK management through Windows tools"  
-    print_warning "⚠️  For emulators: Use Windows Android Studio (GUI emulators don't work in WSL)"
-    
-else
-    print_warning "Windows Android Studio SDK not found in standard locations."
-    print_status "Searched in:"
-    for path in "${POSSIBLE_SDK_PATHS[@]}"; do
-        echo "  ❌ $path"
-    done
-    print_status "💡 If you have Android Studio installed, you can manually set the path:"
-    print_status "   export ANDROID_HOME=\"/mnt/c/path/to/your/Android/Sdk\""
-    print_warning "Installing minimal WSL Android SDK as fallback..."
-    
-    # Install minimal Android SDK for WSL-only development
-    ANDROID_HOME="$HOME/Android/Sdk"
-    mkdir -p "$ANDROID_HOME"
-    
-    # Download and install command line tools
-    cd /tmp
-    wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -q
-    unzip -q commandlinetools-linux-9477386_latest.zip
-    mkdir -p "$ANDROID_HOME/cmdline-tools/latest"
-    mv cmdline-tools/* "$ANDROID_HOME/cmdline-tools/latest/"
-    rm -rf cmdline-tools commandlinetools-linux-9477386_latest.zip
-    
-    # Set up Android environment variables
-    echo '' >> ~/.zshrc
-    echo '# Android SDK Configuration (WSL-only)' >> ~/.zshrc
-    echo 'export ANDROID_HOME="$HOME/Android/Sdk"' >> ~/.zshrc
-    echo 'export ANDROID_SDK_ROOT="$ANDROID_HOME"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/platform-tools:$PATH"' >> ~/.zshrc
-    echo 'export PATH="$ANDROID_HOME/build-tools:$PATH"' >> ~/.zshrc
-    
-    # Load Android environment for current session
-    export ANDROID_HOME="$HOME/Android/Sdk"
-    export ANDROID_SDK_ROOT="$ANDROID_HOME"
-    export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-    export PATH="$ANDROID_HOME/platform-tools:$PATH"
-    export PATH="$ANDROID_HOME/build-tools:$PATH"
-    
-    # Accept Android SDK licenses and install minimal components
-    yes | sdkmanager --licenses >/dev/null 2>&1
-    sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34" >/dev/null 2>&1
-    
-    print_success "Minimal Android SDK installed for WSL"
-    print_warning "💡 For full Android development, install Android Studio on Windows"
-fi
-
-print_success "Android development environment configured successfully"
 
 # Install some useful zsh plugins
 print_status "Installing useful Oh My Zsh plugins..."
@@ -489,29 +343,7 @@ alias ni='npm install'
 alias nid='npm install --save-dev'
 alias nig='npm install -g'
 
-# Android development aliases
-alias adb-devices='adb devices'
-alias adb-logcat='adb logcat'
-alias adb-install='adb install'
-alias adb-uninstall='adb uninstall'
-alias adb-shell='adb shell'
-alias adb-push='adb push'
-alias adb-pull='adb pull'
-alias adb-restart='adb kill-server && adb start-server'
-alias emulator-list='emulator -list-avds'
-alias emulator-start='echo "💡 Start emulators in Windows Android Studio, then use adb to connect"'
-alias gradle-clean='./gradlew clean'
-alias gradle-build='./gradlew build'
-alias gradle-debug='./gradlew assembleDebug'
-alias gradle-release='./gradlew assembleRelease'
-alias gradle-install='./gradlew installDebug'
-alias react-android='npx react-native run-android'
-alias flutter-devices='flutter devices'
-alias flutter-run='flutter run'
-alias flutter-build='flutter build apk'
-alias flutter-clean='flutter clean'
-alias sdk-update='sdkmanager --update'
-alias sdk-list='sdkmanager --list'
+
 
 # Java version management aliases (SDKMAN!)
 alias java-list='sdk list java'
@@ -519,9 +351,6 @@ alias java-install='sdk install java'
 alias java-use='sdk use java'
 alias java-default='sdk default java'
 alias java-current='sdk current java'
-alias gradle-list='sdk list gradle'
-alias gradle-install='sdk install gradle'
-alias gradle-use='sdk use gradle'
 
 EOF
 
@@ -539,17 +368,12 @@ echo "  ✅ pyenv with latest stable Python"
 echo "  ✅ Git (configured)"
 echo "  ✅ GitHub CLI"
 echo "  ✅ SDKMAN! with Java 21 LTS"
-echo "  ✅ Gradle via SDKMAN!"
-echo "  ✅ Android SDK integration (Windows-first approach)"
 echo "  ✅ Useful aliases and configurations"
 echo ""
 print_warning "Important notes:"
 echo "  🔄 Please restart your terminal or run 'exec zsh' to apply all changes"
 echo "  🐳 You may need to restart WSL for Docker to work properly: wsl --shutdown && wsl"
 echo "  🔐 Run 'gh auth login' to authenticate with GitHub"
-echo "  🤖 Android development optimized for Windows Android Studio integration"
-echo "  📱 For emulators: Use Windows Android Studio (WSL doesn't support GUI emulators)"
-echo "  📱 After starting emulator in Windows, use 'adb devices' in WSL to connect"
 echo "  ☕ Use 'sdk list java' to see available Java versions, 'sdk use java VERSION' to switch"
 echo "  🐍 Python version: $(python --version 2>/dev/null || echo 'Restart terminal first')"
 echo "  📦 Node version: $(node --version 2>/dev/null || echo 'Restart terminal first')"
