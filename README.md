@@ -33,11 +33,13 @@ This script transforms your WSL Ubuntu into a powerful development environment w
 - ☕ **SDKMAN! + Java 21 LTS** - Java version manager with latest LTS
 - 🏗️ **Gradle** - Modern build automation tool (managed by SDKMAN!)
 
-### Mobile Development (Windows-First Approach)
+### Mobile Development (Multiple Approaches)
 - 🤖 **Android SDK Integration** - Seamless Windows Android Studio integration
-- 📱 **ADB Tools** - Cross-platform Android debugging
+- 📱 **ADB Tools** - Cross-platform Android debugging  
 - 🔄 **Intelligent Detection** - Auto-configures based on Windows installation
 - 🛠️ **Command Wrappers** - WSL-compatible Android tool wrappers
+- 🎨 **WSL2 GUI Support** - Full Android Studio with emulator in WSL2
+- 🖥️ **X11 Integration** - Complete graphical interface support
 
 ### Developer Experience
 - ⚡ **100+ Aliases** - Time-saving shortcuts for all tools
@@ -48,9 +50,14 @@ This script transforms your WSL Ubuntu into a powerful development environment w
 
 ## 🚀 Quick Installation
 
-### One-Command Setup
+### Complete Development Environment
 ```bash
 curl -fsSL https://raw.githubusercontent.com/hiurimendes/dev-setup-wsl/main/setup-wsl-dev.sh | bash
+```
+
+### Android Studio with GUI Support (WSL2)
+```bash
+curl -fsSL https://raw.githubusercontent.com/hiurimendes/dev-setup-wsl/main/setup-android-studio-wsl.sh | bash
 ```
 
 ### Manual Installation
@@ -59,9 +66,13 @@ curl -fsSL https://raw.githubusercontent.com/hiurimendes/dev-setup-wsl/main/setu
 git clone https://github.com/hiurimendes/dev-setup-wsl.git
 cd dev-setup-wsl
 
-# Make executable and run
+# Complete environment setup
 chmod +x setup-wsl-dev.sh
 ./setup-wsl-dev.sh
+
+# Android Studio with GUI (requires X11 server on Windows)
+chmod +x setup-android-studio-wsl.sh  
+./setup-android-studio-wsl.sh
 ```
 
 ---
@@ -71,6 +82,96 @@ chmod +x setup-wsl-dev.sh
 - Windows 10/11 with **WSL2** enabled
 - **Ubuntu** distribution installed in WSL
 - Basic terminal knowledge
+
+---
+
+## 🤖 Android Studio WSL2 Setup
+
+### Full GUI Android Studio in WSL2
+
+For developers who want to run Android Studio completely within WSL2 with full GUI support:
+
+```bash
+# Run the Android Studio WSL2 installer
+curl -fsSL https://raw.githubusercontent.com/hiurimendes/dev-setup-wsl/main/setup-android-studio-wsl.sh | bash
+```
+
+### What's Included in Android Studio WSL2 Setup
+
+- 🎨 **Complete GUI Support** - Full Android Studio interface in WSL2
+- 🖥️ **X11 Integration** - Seamless Windows-WSL2 display forwarding
+- 📱 **Android Emulator** - Built-in emulator with hardware acceleration
+- 🛠️ **Latest Android SDK** - Complete SDK with build tools and platform tools
+- ⚡ **Optimized Performance** - WSL2-specific optimizations for graphics
+- 🎯 **Ready-to-Use AVD** - Pre-configured Android Virtual Device
+- 🔧 **Development Tools** - ADB, SDK Manager, AVD Manager
+
+### Prerequisites for Android Studio WSL2
+
+1. **WSL2** (not WSL1) with Ubuntu
+2. **X11 Server on Windows** - Choose one:
+   - [VcXsrv](https://sourceforge.net/projects/vcxsrv/) (Free - Recommended)
+   - [X410](https://www.microsoft.com/store/apps/9nlp712zmn9q) (Paid - Microsoft Store)
+   - [MobaXterm](https://mobaxterm.mobatek.net/) (Free/Paid)
+
+📖 **Detailed X11 Setup Guide:** [SETUP-X11-GUIDE.md](SETUP-X11-GUIDE.md)
+
+### Quick Start with Android Studio WSL2
+
+```bash
+# 1. Install X11 server on Windows (VcXsrv recommended)
+# 2. Run the installer
+./setup-android-studio-wsl.sh
+
+# 3. Configure X11 server with these settings:
+#    - Display number: 0
+#    - Enable "Disable access control"
+#    - Enable "Native opengl" (if available)
+
+# 4. Test the installation
+source ~/.bashrc
+display-check        # Test X11 connection
+android-studio       # Launch Android Studio
+```
+
+### Android Studio WSL2 Commands
+
+```bash
+# Launch applications
+as                   # Open Android Studio
+emu                  # Start default emulator
+avd                  # Manage Android Virtual Devices
+
+# Development tools
+adb-devices          # List connected devices
+adb-logs            # View device logs
+gradle-clean        # Clean project
+gradle-build        # Build project
+gradle-install      # Install debug APK
+
+# Display testing
+display-test        # Test GUI (opens xeyes)
+gpu-info           # Check OpenGL information
+```
+
+### Performance Notes for WSL2 Android Studio
+
+**✅ Advantages:**
+- Complete Linux development environment
+- Better file system performance for large projects
+- Native Linux tools and terminal
+- Integrated development workflow
+
+**⚠️ Considerations:**
+- Emulator performance may be slower than native Windows
+- Graphics acceleration is software-based
+- X11 forwarding adds slight latency
+- RAM usage is higher due to GUI components
+
+**💡 Recommended Workflow:**
+- Use WSL2 Android Studio for development and coding
+- Use Windows emulator for intensive testing (better performance)
+- Use WSL2 for CLI tools (ADB, Gradle, Git)
 
 ---
 
@@ -419,6 +520,52 @@ rm ~/Android/Sdk && mv ~/Android/Sdk.backup ~/Android/Sdk
 
 # Check Java version (should be 17+)
 java --version
+```
+
+#### Android Studio WSL2 GUI Issues
+```bash
+# Check X11 connection
+echo $DISPLAY
+display-check
+
+# Reset display configuration
+export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2; exit;}'):0.0
+
+# Test basic GUI
+xeyes  # Should open a GUI application
+
+# Restart X11 server on Windows if GUI not working
+# Make sure Windows Defender/Firewall isn't blocking X11 server
+```
+
+#### Android Emulator Issues in WSL2
+```bash
+# Check emulator configuration
+emulator -list-avds
+
+# Start emulator with software rendering
+android-emulator Pixel_7_API_34_WSL
+
+# If emulator fails to start, check hardware acceleration
+cat ~/.android/avd/*/config.ini | grep hw.gpu
+
+# Alternative: Use Windows emulator with WSL2 ADB
+# 1. Start emulator in Windows Android Studio
+# 2. Connect from WSL2: adb connect localhost:5555
+```
+
+#### Display Resolution Issues
+```bash
+# Adjust display scaling
+export GDK_SCALE=1.5
+export QT_SCALE_FACTOR=1.5
+
+# Or disable scaling
+export GDK_SCALE=1
+export QT_SCALE_FACTOR=1
+
+# Restart Android Studio
+android-studio
 ```
 
 ### Performance & Best Practices
