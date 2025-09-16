@@ -251,14 +251,32 @@ fi
 # Set up Android development environment prioritizing Windows Android Studio integration
 print_status "Setting up Android development environment..."
 
-# Define paths for Windows Android Studio detection
-WINDOWS_ANDROID_SDK="/mnt/c/Users/$USER/AppData/Local/Android/Sdk"
+# Define possible paths for Windows Android Studio detection
 WINDOWS_USER_HOME="/mnt/c/Users/$USER"
+POSSIBLE_SDK_PATHS=(
+    "/mnt/c/Users/$USER/AppData/Local/Android/Sdk"
+    "/mnt/c/Android/Sdk"
+    "/mnt/c/Program Files/Android/Android Studio/sdk"
+    "/mnt/c/Program Files (x86)/Android/Android Studio/sdk"
+    "/mnt/c/Users/$USER/Android/Sdk"
+    "/mnt/c/tools/android-sdk"
+    "/mnt/c/android-sdk-windows"
+)
 
 # Check for Windows Android Studio installation
 print_status "Checking for Windows Android Studio installation..."
+print_status "Searching in multiple possible locations..."
 
-if [ -d "$WINDOWS_ANDROID_SDK" ]; then
+WINDOWS_ANDROID_SDK=""
+for sdk_path in "${POSSIBLE_SDK_PATHS[@]}"; do
+    print_status "Checking: $sdk_path"
+    if [ -d "$sdk_path" ]; then
+        WINDOWS_ANDROID_SDK="$sdk_path"
+        break
+    fi
+done
+
+if [ -n "$WINDOWS_ANDROID_SDK" ]; then
     print_success "Windows Android Studio SDK found! Setting up WSL integration..."
     
     # Set up Android environment to use Windows SDK
@@ -274,7 +292,7 @@ if [ -d "$WINDOWS_ANDROID_SDK" ]; then
     # Add Windows Android tools to PATH and environment
     echo '' >> ~/.zshrc
     echo '# Android SDK Configuration (Windows Integration)' >> ~/.zshrc
-    echo 'export ANDROID_HOME="/mnt/c/Users/$USER/AppData/Local/Android/Sdk"' >> ~/.zshrc
+    echo "export ANDROID_HOME=\"$WINDOWS_ANDROID_SDK\"" >> ~/.zshrc
     echo 'export ANDROID_SDK_ROOT="$ANDROID_HOME"' >> ~/.zshrc
     echo 'export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> ~/.zshrc
     echo 'export PATH="$ANDROID_HOME/platform-tools:$PATH"' >> ~/.zshrc
@@ -286,33 +304,33 @@ if [ -d "$WINDOWS_ANDROID_SDK" ]; then
     mkdir -p "$HOME/.local/bin"
     
     # ADB wrapper that works with Windows paths
-    cat > "$HOME/.local/bin/adb" << 'EOF'
+    cat > "$HOME/.local/bin/adb" << EOF
 #!/bin/bash
-exec "/mnt/c/Users/$USER/AppData/Local/Android/Sdk/platform-tools/adb.exe" "$@"
+exec "$WINDOWS_ANDROID_SDK/platform-tools/adb.exe" "\$@"
 EOF
     chmod +x "$HOME/.local/bin/adb"
     
     # Emulator wrapper (note: GUI emulators won't work in WSL, but command works)
-    cat > "$HOME/.local/bin/emulator" << 'EOF'
+    cat > "$HOME/.local/bin/emulator" << EOF
 #!/bin/bash
 echo "⚠️  GUI emulators don't work in WSL. Use Windows Android Studio to run emulators."
 echo "💡 Tip: Start emulator in Windows, then use 'adb devices' in WSL to connect."
 echo "🔧 Available emulators:"
-exec "/mnt/c/Users/$USER/AppData/Local/Android/Sdk/emulator/emulator.exe" -list-avds
+exec "$WINDOWS_ANDROID_SDK/emulator/emulator.exe" -list-avds
 EOF
     chmod +x "$HOME/.local/bin/emulator"
     
     # AVD Manager wrapper
-    cat > "$HOME/.local/bin/avdmanager" << 'EOF'
+    cat > "$HOME/.local/bin/avdmanager" << EOF
 #!/bin/bash
-exec "/mnt/c/Users/$USER/AppData/Local/Android/Sdk/cmdline-tools/latest/bin/avdmanager.bat" "$@"
+exec "$WINDOWS_ANDROID_SDK/cmdline-tools/latest/bin/avdmanager.bat" "\$@"
 EOF
     chmod +x "$HOME/.local/bin/avdmanager"
     
     # SDK Manager wrapper  
-    cat > "$HOME/.local/bin/sdkmanager" << 'EOF'
+    cat > "$HOME/.local/bin/sdkmanager" << EOF
 #!/bin/bash
-exec "/mnt/c/Users/$USER/AppData/Local/Android/Sdk/cmdline-tools/latest/bin/sdkmanager.bat" "$@"
+exec "$WINDOWS_ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager.bat" "\$@"
 EOF
     chmod +x "$HOME/.local/bin/sdkmanager"
     
@@ -320,12 +338,20 @@ EOF
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
     
     print_success "Android SDK integrated with Windows Android Studio"
+    print_success "📍 Found Android SDK at: $WINDOWS_ANDROID_SDK"
     print_success "✅ ADB commands will work seamlessly"
     print_success "✅ SDK management through Windows tools"  
     print_warning "⚠️  For emulators: Use Windows Android Studio (GUI emulators don't work in WSL)"
     
 else
-    print_warning "Windows Android Studio not found. Installing minimal WSL Android SDK..."
+    print_warning "Windows Android Studio SDK not found in standard locations."
+    print_status "Searched in:"
+    for path in "${POSSIBLE_SDK_PATHS[@]}"; do
+        echo "  ❌ $path"
+    done
+    print_status "💡 If you have Android Studio installed, you can manually set the path:"
+    print_status "   export ANDROID_HOME=\"/mnt/c/path/to/your/Android/Sdk\""
+    print_warning "Installing minimal WSL Android SDK as fallback..."
     
     # Install minimal Android SDK for WSL-only development
     ANDROID_HOME="$HOME/Android/Sdk"
