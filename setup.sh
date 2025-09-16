@@ -48,29 +48,39 @@ else
     print_warning "Oh My Zsh already installed"
 fi
 
-# Change default shell to zsh
-print_status "Setting zsh as default shell..."
+# Change default shell to zsh (skip in WSL as it often requires interactive authentication)
+print_status "Setting up zsh as preferred shell..."
 if [ "$SHELL" != "/usr/bin/zsh" ]; then
-    # Try to change shell, but handle authentication failures gracefully
-    if chsh -s $(which zsh) 2>/dev/null; then
-        print_success "Default shell changed to zsh (restart terminal to take effect)"
+    print_warning "Skipping automatic shell change in WSL (requires interactive authentication)"
+    print_status "Setting up automatic zsh launch instead..."
+    
+    # Add auto-switch to zsh in bashrc as primary method for WSL
+    if [ -f ~/.bashrc ] && ! grep -q "exec zsh" ~/.bashrc; then
+        echo "" >> ~/.bashrc
+        echo "# Auto-switch to zsh if available and in interactive session" >> ~/.bashrc
+        echo "if [ -t 1 ] && [ -z \"\$ZSH_LAUNCHED\" ] && command -v zsh >/dev/null 2>&1; then" >> ~/.bashrc
+        echo "    export ZSH_LAUNCHED=1" >> ~/.bashrc
+        echo "    exec zsh" >> ~/.bashrc
+        echo "fi" >> ~/.bashrc
+        print_success "Added auto-switch to zsh in ~/.bashrc"
     else
-        print_warning "Could not change default shell automatically (authentication required)"
-        print_status "You can manually change your shell later with: chsh -s \$(which zsh)"
-        print_status "Or add 'exec zsh' to your ~/.bashrc to auto-switch to zsh"
-        
-        # Add auto-switch to zsh in bashrc as fallback
-        if [ -f ~/.bashrc ] && ! grep -q "exec zsh" ~/.bashrc; then
-            echo "" >> ~/.bashrc
-            echo "# Auto-switch to zsh if available" >> ~/.bashrc
-            echo "if [ -t 1 ] && command -v zsh >/dev/null 2>&1; then" >> ~/.bashrc
-            echo "    exec zsh" >> ~/.bashrc
-            echo "fi" >> ~/.bashrc
-            print_success "Added auto-switch to zsh in ~/.bashrc"
-        fi
+        print_warning "Auto-switch to zsh already configured in ~/.bashrc"
     fi
+    
+    # Also add to profile for login shells
+    if [ -f ~/.profile ] && ! grep -q "ZSH_LAUNCHED" ~/.profile; then
+        echo "" >> ~/.profile
+        echo "# Auto-switch to zsh for login shells" >> ~/.profile
+        echo "if [ -t 1 ] && [ -z \"\$ZSH_LAUNCHED\" ] && command -v zsh >/dev/null 2>&1; then" >> ~/.profile
+        echo "    export ZSH_LAUNCHED=1" >> ~/.profile
+        echo "    exec zsh -l" >> ~/.profile
+        echo "fi" >> ~/.profile
+    fi
+    
+    print_success "Zsh will be launched automatically in new terminals"
+    print_status "To manually change default shell later: sudo chsh -s \$(which zsh) \$USER"
 else
-    print_warning "Zsh is already the default shell"
+    print_success "Zsh is already the default shell"
 fi
 
 # Install NVM (Node Version Manager)
