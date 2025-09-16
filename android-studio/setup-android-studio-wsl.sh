@@ -97,8 +97,50 @@ install_gui_deps() {
         echo "default-server = unix:/mnt/wslg/PulseServer" > ~/.config/pulse/client.conf
     fi
     
-    success "GUI nativo WSLg configurado"
+        success "GUI nativo WSLg configurado"
 }
+
+# Configurar permissões KVM para emulador
+setup_kvm_permissions() {
+    info "Configurando permissões KVM para aceleração de hardware..."
+    
+    # Verificar se /dev/kvm existe (WSL2 com nested virtualization)
+    if [ -e /dev/kvm ]; then
+        # Verificar se usuário já tem acesso
+        if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+            success "Acesso ao /dev/kvm já configurado"
+            return
+        fi
+        
+        # Adicionar usuário ao grupo kvm
+        if getent group kvm >/dev/null 2>&1; then
+            sudo usermod -aG kvm $USER
+            success "Usuário adicionado ao grupo kvm"
+        else
+            # Criar grupo kvm se não existir
+            sudo groupadd kvm
+            sudo usermod -aG kvm $USER
+            success "Grupo kvm criado e usuário adicionado"
+        fi
+        
+        # Configurar permissões do dispositivo
+        sudo chmod 666 /dev/kvm
+        
+        warn "⚠️  Para aplicar permissões KVM, reinicie o terminal WSL ou faça logout/login"
+        warn "💡 Teste com: ls -la /dev/kvm"
+        
+    else
+        warn "⚠️  /dev/kvm não encontrado"
+        warn "💡 Para habilitar KVM no WSL2:"
+        warn "   1. Habilite 'Virtual Machine Platform' no Windows"
+        warn "   2. Use WSL2 com kernel atualizado"
+        warn "   3. Configure nested virtualization se necessário"
+        info "Emulador funcionará com software rendering (mais lento)"
+    fi
+}
+
+# Verificar GPU e drivers
+
 
 # Instalar SDKMAN! e Java 21
 install_java_sdkman() {
@@ -237,10 +279,10 @@ create_avd() {
         -d "pixel_7" \
         --force
     
-    # Otimizar para WSL2
+    # Otimizar para WSL2 com KVM
     cat >> "$HOME/.android/avd/$AVD_NAME.avd/config.ini" << 'EOF'
 
-# WSLg Native Hardware Acceleration
+# WSLg Native + KVM Hardware Acceleration
 hw.gpu.enabled=yes
 hw.gpu.mode=host
 hw.ramSize=2048
@@ -249,6 +291,10 @@ hw.mainKeys=yes
 hw.trackBall=no
 hw.audioInput=yes
 hw.audioOutput=yes
+# KVM acceleration (se disponível)
+hw.cpu.ncore=2
+vm.heapSize=512
+disk.dataPartition.size=2048MB
 EOF
     
     success "Emulador criado: $AVD_NAME"
@@ -290,7 +336,56 @@ fi
 
 echo "📱 Iniciando emulador com GPU nativa: $AVD"
 echo "🚀 Usando hardware acceleration do Windows!"
-$ANDROID_HOME/emulator/emulator -avd "$AVD" -gpu host -feature HVF &
+
+# Verificar se KVM está disponível para máxima aceleração
+if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+    echo "⚡ KVM detectado - máxima aceleração habilitada!"
+    $ANDROID_HOME/emulator/emulator -avd "$AVD" -gpu host -accel on -feature HVF &
+else
+    echo "⚠️  KVM não disponível - usando aceleração básica"
+    $ANDROID_HOME/emulator/emulator -avd "$AVD" -gpu host -feature HVF &
+fi
+EOF
+
+    # KVM Diagnostic Tool
+    cat > ~/.local/bin/kvm-check << 'EOF'
+#!/bin/bash
+echo "🔍 Diagnóstico KVM para Android Emulator"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Verificar se /dev/kvm existe
+if [ -e /dev/kvm ]; then
+    echo "✅ /dev/kvm encontrado"
+    
+    # Verificar permissões
+    KVM_PERMS=$(ls -la /dev/kvm)
+    echo "📋 Permissões: $KVM_PERMS"
+    
+    if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+        echo "✅ Acesso de leitura/escrita OK"
+    else
+        echo "❌ Sem acesso adequado ao /dev/kvm"
+        echo "🔧 Solução: sudo chmod 666 /dev/kvm"
+        echo "🔧 Ou adicionar ao grupo: sudo usermod -aG kvm $USER"
+    fi
+    
+    # Verificar grupos do usuário
+    if groups | grep -q kvm; then
+        echo "✅ Usuário no grupo kvm"
+    else
+        echo "⚠️  Usuário não está no grupo kvm"
+        echo "🔧 Solução: sudo usermod -aG kvm $USER && newgrp kvm"
+    fi
+    
+else
+    echo "❌ /dev/kvm não encontrado"
+    echo "💡 KVM não está disponível no WSL2"
+    echo "💡 Emulador usará software acceleration (mais lento)"
+fi
+
+echo ""
+echo "🧪 Para testar emulador:"
+echo "emulator-wsl"
 EOF
 
     # Java Manager (SDKMAN helper)
@@ -324,10 +419,10 @@ case $1 in
 esac
 EOF
     
-    chmod +x ~/.local/bin/studio ~/.local/bin/emulator-wsl ~/.local/bin/java-manager
+    chmod +x ~/.local/bin/studio ~/.local/bin/emulator-wsl ~/.local/bin/java-manager ~/.local/bin/kvm-check
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
     
-    success "Launchers criados: studio, emulator-wsl, java-manager"
+    success "Launchers criados: studio, emulator-wsl, java-manager, kvm-check"
 }
 
 # Limpeza
@@ -346,7 +441,8 @@ main() {
     check_wsl
     install_basic_deps
     install_gui_deps
-    check_gpu_support  
+    check_gpu_support
+    setup_kvm_permissions
     install_java_sdkman
     install_android_studio
     install_sdk
@@ -373,13 +469,19 @@ main() {
     echo "• sdk default java X.Y.Z - Definir versão padrão"
     echo "• java --version         - Ver versão atual"
     echo ""
-    warn "🎮 VANTAGENS WSLg NATIVO:"
+    warn "🎮 VANTAGENS WSLg NATIVO + KVM:"
     echo "✅ Hardware acceleration da GPU do Windows"
+    echo "✅ KVM para máxima aceleração do emulador"
     echo "✅ Sem necessidade de servidor X11 externo"
     echo "✅ Apps aparecem no menu Iniciar do Windows"
     echo "✅ Alt+Tab entre apps Windows e Linux"
     echo "✅ Copy/paste nativo entre Windows e Linux"
     echo "✅ Performance superior ao X11 forwarding"
+    echo ""
+    warn "🔧 VERIFICAR PERMISSÕES KVM:"
+    echo "• ls -la /dev/kvm (deve mostrar rw-rw---- ou similar)"
+    echo "• Se necessário: sudo chmod 666 /dev/kvm"
+    echo "• Reinicie terminal se adicionado ao grupo kvm"
     echo ""
     success "🚀 Pronto para desenvolver com GPU nativa!"
 }
