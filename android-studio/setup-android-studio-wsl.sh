@@ -19,14 +19,54 @@ success() { echo -e "${GREEN}[✓]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 error() { echo -e "${RED}[✗]${NC} $1"; }
 
-# Verificar WSL
+# Verificar WSL e WSLg
 check_wsl() {
-    info "Verificando WSL..."
+    info "Verificando WSL2 e suporte GUI nativo..."
+    
+    # Verificar se está no WSL
     if [[ ! -f /proc/version ]] || ! grep -qi "microsoft\|wsl" /proc/version; then
         error "Execute no WSL2!"
         exit 1
     fi
-    success "WSL detectado"
+    
+    # Verificar se é WSL2 (necessário para WSLg)
+    if ! grep -qi "wsl2" /proc/version && [ -z "$WSL_DISTRO_NAME" ]; then
+        error "WSL2 é necessário para GUI nativo. Atualize para WSL2."
+        exit 1
+    fi
+    
+    # Verificar se WSLg está disponível (Windows 11)
+    if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+        warn "WSLg pode não estar habilitado. Certifique-se de estar no Windows 11."
+        warn "Execute 'wsl --update' no Windows para habilitar GUI nativo."
+    else
+        success "WSLg (GUI nativo) detectado!"
+    fi
+    
+    success "WSL2 verificado"
+}
+
+# Verificar GPU e drivers
+check_gpu_support() {
+    info "Verificando suporte GPU para WSLg..."
+    
+    # Verificar se glxinfo está disponível para testar
+    if command -v glxinfo &> /dev/null; then
+        GPU_INFO=$(glxinfo | grep -i "opengl renderer" || echo "N/A")
+        info "GPU detectada: $GPU_INFO"
+        
+        if echo "$GPU_INFO" | grep -qi "llvmpipe\|software"; then
+            warn "⚠️  GPU usando software rendering"
+            warn "💡 Instale drivers GPU no Windows para melhor performance:"
+            warn "   • NVIDIA: https://www.nvidia.com/drivers"
+            warn "   • AMD: https://www.amd.com/support/download/drivers.html" 
+            warn "   • Intel: https://downloadcenter.intel.com/"
+        else
+            success "✅ Hardware acceleration disponível"
+        fi
+    else
+        info "glxinfo será instalado para testar GPU..."
+    fi
 }
 
 # Dependências básicas
@@ -37,17 +77,27 @@ install_basic_deps() {
     success "Dependências básicas instaladas"
 }
 
-# GUI essencial para Android Studio + Emulador
+# GUI nativo WSLg para Android Studio + Emulador
 install_gui_deps() {
-    info "Instalando GUI essencial..."
+    info "Instalando dependências GUI para WSLg (nativo)..."
+    
+    # Dependências mínimas para WSLg - hardware acceleration nativo
     sudo apt install -y \
-        x11-apps \
         mesa-utils \
+        mesa-vulkan-drivers \
         libgl1-mesa-dri \
         libqt5gui5 \
         libgtk-3-0 \
-        libasound2-dev
-    success "GUI essencial instalada"
+        libasound2-plugins \
+        pulseaudio
+    
+    # Configurar PulseAudio para WSLg
+    if [ ! -f ~/.config/pulse/client.conf ]; then
+        mkdir -p ~/.config/pulse
+        echo "default-server = unix:/mnt/wslg/PulseServer" > ~/.config/pulse/client.conf
+    fi
+    
+    success "GUI nativo WSLg configurado"
 }
 
 # Instalar SDKMAN! e Java 21
@@ -142,13 +192,21 @@ install_sdk() {
     
     cat >> ~/.bashrc << 'EOF'
 
-# Android + Display WSL2
+# Android SDK + WSLg Native Graphics
 export ANDROID_HOME=$HOME/Android/Sdk
 export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 export PATH=$ANDROID_HOME/platform-tools:$PATH
 export PATH=$ANDROID_HOME/emulator:$PATH
-export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
-export LIBGL_ALWAYS_INDIRECT=1
+
+# WSLg Native Display (Windows 11)
+# Display é automaticamente configurado pelo WSLg
+if [ -n "$WSL_DISTRO_NAME" ]; then
+    # Habilitar hardware acceleration nativo
+    export LIBGL_ALWAYS_SOFTWARE=0
+    export __GLX_VENDOR_LIBRARY_NAME=mesa
+    # Audio nativo WSLg
+    export PULSE_SERVER="unix:/mnt/wslg/PulseServer"
+fi
 EOF
 
     source ~/.bashrc
@@ -182,10 +240,15 @@ create_avd() {
     # Otimizar para WSL2
     cat >> "$HOME/.android/avd/$AVD_NAME.avd/config.ini" << 'EOF'
 
+# WSLg Native Hardware Acceleration
 hw.gpu.enabled=yes
-hw.gpu.mode=swiftshader_indirect
+hw.gpu.mode=host
 hw.ramSize=2048
 hw.keyboard=yes
+hw.mainKeys=yes
+hw.trackBall=no
+hw.audioInput=yes
+hw.audioOutput=yes
 EOF
     
     success "Emulador criado: $AVD_NAME"
@@ -196,23 +259,38 @@ create_launchers() {
     info "Criando launchers..."
     mkdir -p ~/.local/bin
     
-    # Android Studio
+    # Android Studio com WSLg nativo
     cat > ~/.local/bin/studio << 'EOF'
 #!/bin/bash
-export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
+# WSLg Native Graphics (Windows 11)
 export ANDROID_HOME=$HOME/Android/Sdk
-echo "🚀 Abrindo Android Studio... (Servidor X deve estar rodando no Windows)"
+
+# Verificar se WSLg está disponível
+if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+    echo "⚠️  WSLg não detectado. Certifique-se de estar no Windows 11 com WSL atualizado."
+    echo "💡 Execute no Windows: wsl --update && wsl --shutdown"
+    exit 1
+fi
+
+echo "🚀 Abrindo Android Studio com GPU nativa do Windows..."
 $HOME/android-studio/bin/studio.sh &
 EOF
     
-    # Emulator  
+    # Emulator com WSLg nativo
     cat > ~/.local/bin/emulator-wsl << 'EOF'
 #!/bin/bash
-export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
 export ANDROID_HOME=$HOME/Android/Sdk
 AVD=${1:-"Pixel_API34_WSL"}
-echo "📱 Iniciando emulador: $AVD"
-$ANDROID_HOME/emulator/emulator -avd "$AVD" -gpu swiftshader_indirect &
+
+# Verificar WSLg
+if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+    echo "⚠️  WSLg não disponível. Use Windows 11 com WSL atualizado."
+    exit 1
+fi
+
+echo "📱 Iniciando emulador com GPU nativa: $AVD"
+echo "🚀 Usando hardware acceleration do Windows!"
+$ANDROID_HOME/emulator/emulator -avd "$AVD" -gpu host -feature HVF &
 EOF
 
     # Java Manager (SDKMAN helper)
@@ -267,7 +345,8 @@ main() {
     
     check_wsl
     install_basic_deps
-    install_gui_deps  
+    install_gui_deps
+    check_gpu_support  
     install_java_sdkman
     install_android_studio
     install_sdk
@@ -278,22 +357,31 @@ main() {
     echo ""
     success "✅ Instalação concluída!"
     echo ""
-    warn "⚠️  PRÓXIMOS PASSOS:"
-    echo "1. Instale VcXsrv no Windows: https://sourceforge.net/projects/vcxsrv/"
-    echo "2. Configure: Display :0, Disable access control"
-    echo "3. Reinicie terminal: source ~/.bashrc"
-    echo "4. Teste: xclock"
-    echo "5. Abra Android Studio: studio"
-    echo "6. Inicie emulador: emulator-wsl"
+    warn "⚠️  PRÓXIMOS PASSOS (WSLg Nativo):"
+    echo "1. ✅ Certifique-se que está no Windows 11"
+    echo "2. ✅ Execute no Windows: wsl --update"  
+    echo "3. ✅ Reinicie WSL: wsl --shutdown (depois reabra)"
+    echo "4. 🔄 Reinicie terminal WSL: source ~/.bashrc"
+    echo "5. 🧪 Teste GUI nativo: glxgears (deve usar GPU do Windows)"
+    echo "6. 🚀 Abra Android Studio: studio"
+    echo "7. 📱 Inicie emulador: emulator-wsl"
     echo ""
     warn "📋 COMANDOS JAVA (SDKMAN!):"
     echo "• sdk list java          - Listar versões Java disponíveis"
     echo "• sdk install java X.Y.Z - Instalar versão específica"
-    echo "• sdk use java X.Y.Z     - Usar versão temporariamente"
+    echo "• sdk use java X.Y.Z     - Usar versão temporariamente"  
     echo "• sdk default java X.Y.Z - Definir versão padrão"
     echo "• java --version         - Ver versão atual"
     echo ""
-    success "🚀 Pronto para usar!"
+    warn "🎮 VANTAGENS WSLg NATIVO:"
+    echo "✅ Hardware acceleration da GPU do Windows"
+    echo "✅ Sem necessidade de servidor X11 externo"
+    echo "✅ Apps aparecem no menu Iniciar do Windows"
+    echo "✅ Alt+Tab entre apps Windows e Linux"
+    echo "✅ Copy/paste nativo entre Windows e Linux"
+    echo "✅ Performance superior ao X11 forwarding"
+    echo ""
+    success "🚀 Pronto para desenvolver com GPU nativa!"
 }
 
 main "$@"
