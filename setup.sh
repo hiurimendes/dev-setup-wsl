@@ -313,7 +313,7 @@ if [ ! -d "$HOME/.sdkman" ]; then
         }
     ' | sort -Vr | head -1)
 
-    if [ -z "$JAVA_VERSION" ] || ! [[ "$JAVA_VERSION" =~ ^[0-9]+([.][0-9]+)*-tem$ ]]; then
+    if [[ -z "$JAVA_VERSION" ]] || ! [[ "$JAVA_VERSION" =~ ^[0-9]+([.][0-9]+)*-tem$ ]]; then
         print_warning "Unable to detect latest stable Java automatically, using 21-tem as fallback"
         JAVA_VERSION="21-tem"
     fi
