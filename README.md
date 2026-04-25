@@ -29,7 +29,7 @@ This script transforms your WSL Ubuntu into a powerful development environment w
 
 ### Containerization & Build Tools
 - 🐳 **Docker + Docker Compose** - Complete containerization stack
-- ☕ **SDKMAN! + Java 21 LTS** - Java version manager with latest LTS
+- ☕ **SDKMAN! + Java LTS** - Java version manager with latest LTS
 
 ### Developer Experience
 - ⚡ **Useful Aliases** - Time-saving shortcuts for all tools
@@ -100,9 +100,9 @@ adb --version
 ### Node.js Development
 ```bash
 # Install and use Node versions
-nvm install 18.17.0
-nvm use 18.17.0
-nvm alias default 18.17.0
+nvm install --lts
+nvm use --lts
+nvm alias default lts/*
 
 # Package management
 npm install
@@ -114,9 +114,10 @@ yarn dev
 ### Python Development
 ```bash
 # Install and manage Python versions
-pyenv install 3.11.5
-pyenv global 3.11.5
-pyenv local 3.9.0
+LATEST_PYTHON=$(pyenv install --list | grep -E "^[[:space:]]*[0-9]+\\.[0-9]+\\.[0-9]+$" | tail -1 | xargs)
+pyenv install "$LATEST_PYTHON"
+pyenv global "$LATEST_PYTHON"
+pyenv local 3.11
 
 # Virtual environments
 python -m venv myproject
@@ -141,13 +142,12 @@ docker-compose logs -f
 # List available Java versions
 sdk list java
 
-# Install specific Java version
-sdk install java 17.0.9-tem
-sdk install java 21.0.1-tem
+# Install latest LTS (Temurin example)
+sdk install java 21-tem
 
 # Switch Java version
-sdk use java 17.0.9-tem
-sdk default java 21.0.1-tem
+sdk use java 21-tem
+sdk default java 21-tem
 
 # Check current version
 sdk current java

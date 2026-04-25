@@ -31,6 +31,11 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+get_latest_github_release_tag() {
+    local repo="$1"
+    curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")' || true
+}
+
 # Update system packages
 print_status "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
@@ -86,7 +91,15 @@ fi
 # Install NVM (Node Version Manager)
 print_status "Installing NVM..."
 if [ ! -d "$HOME/.nvm" ]; then
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.4/install.sh | bash
+    NVM_VERSION=$(get_latest_github_release_tag "nvm-sh/nvm")
+    NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh"
+    if [ -n "$NVM_VERSION" ]; then
+        NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
+    else
+        print_warning "Unable to detect latest NVM release, using master installer"
+    fi
+
+    curl -o- "$NVM_INSTALL_URL" | bash
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
@@ -233,12 +246,28 @@ if [ ! -d "$HOME/.sdkman" ]; then
     echo 'export SDKMAN_DIR="$HOME/.sdkman"' >> ~/.zshrc
     echo '[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"' >> ~/.zshrc
     
-    # Install Java 21 LTS as default
-    print_status "Installing Java 21 LTS..."
-    sdk install java 21.0.1-tem
-    sdk default java 21.0.1-tem
+    # Install latest Java LTS (Temurin) as default
+    print_status "Installing latest Java LTS..."
+    JAVA_LTS_VERSION=$(sdk list java | awk -F'|' '
+        tolower($0) ~ /tem/ && tolower($0) ~ /lts/ {
+            version=$6
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
+            if (version ~ /-tem$/) {
+                print version
+                exit
+            }
+        }
+    ')
+
+    if [ -z "$JAVA_LTS_VERSION" ]; then
+        print_warning "Unable to detect latest Java LTS automatically, using 21-tem as fallback"
+        JAVA_LTS_VERSION="21-tem"
+    fi
+
+    sdk install java "$JAVA_LTS_VERSION"
+    sdk default java "$JAVA_LTS_VERSION"
     
-    print_success "SDKMAN! and Java 21 installed successfully"
+    print_success "SDKMAN! and Java ${JAVA_LTS_VERSION} installed successfully"
 else
     print_warning "SDKMAN! already installed"
 fi
@@ -367,7 +396,7 @@ echo "  ✅ Docker with Docker Compose"
 echo "  ✅ pyenv with latest stable Python"
 echo "  ✅ Git (configured)"
 echo "  ✅ GitHub CLI"
-echo "  ✅ SDKMAN! with Java 21 LTS"
+echo "  ✅ SDKMAN! with latest Java LTS"
 echo "  ✅ Useful aliases and configurations"
 echo ""
 print_warning "Important notes:"
