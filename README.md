@@ -29,7 +29,7 @@ This script transforms your WSL Ubuntu into a powerful development environment w
 
 ### Containerization & Build Tools
 - 🐳 **Docker + Docker Compose** - Complete containerization stack
-- ☕ **SDKMAN! + Java LTS** - Java version manager with latest LTS
+- ☕ **SDKMAN! + Java (Temurin)** - Java version manager with latest stable release
 
 ### Developer Experience
 - ⚡ **Useful Aliases** - Time-saving shortcuts for all tools
@@ -114,7 +114,7 @@ yarn dev
 ### Python Development
 ```bash
 # Install and manage Python versions
-LATEST_PYTHON=$(pyenv install --list | grep -E "^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$" | tail -1 | xargs)
+LATEST_PYTHON=$(pyenv install --list | grep -E "^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1 | xargs)
 pyenv install "$LATEST_PYTHON"
 pyenv global "$LATEST_PYTHON"
 pyenv local "$LATEST_PYTHON"
@@ -142,12 +142,12 @@ docker-compose logs -f
 # List available Java versions
 sdk list java
 
-# Install latest LTS (choose an identifier marked as LTS from `sdk list java`)
-sdk install java <java-lts-identifier>
+# Install latest stable Temurin (use an identifier from `sdk list java`, e.g. 21.0.8-tem)
+sdk install java <VERSION>
 
 # Switch Java version
-sdk use java <java-lts-identifier>
-sdk default java <java-lts-identifier>
+sdk use java <VERSION>
+sdk default java <VERSION>
 
 # Check current version
 sdk current java

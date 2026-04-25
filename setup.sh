@@ -248,10 +248,10 @@ if [ ! -d "$HOME/.sdkman" ]; then
     echo 'export SDKMAN_DIR="$HOME/.sdkman"' >> ~/.zshrc
     echo '[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"' >> ~/.zshrc
     
-    # Install latest Java LTS (Temurin) as default
-    print_status "Installing latest Java LTS..."
-    JAVA_LTS_VERSION=$(sdk list java | awk '
-        tolower($0) ~ /tem/ && tolower($0) ~ /lts/ {
+    # Install latest stable Java (Temurin) as default
+    print_status "Installing latest stable Java (Temurin)..."
+    JAVA_VERSION=$(sdk list java | awk '
+        tolower($0) ~ /-tem/ && tolower($0) !~ /ea/ {
             if (match($0, /[0-9]+([.][0-9]+)*-tem/)) {
                 version=substr($0, RSTART, RLENGTH)
                 print version
@@ -260,15 +260,15 @@ if [ ! -d "$HOME/.sdkman" ]; then
         }
     ')
 
-    if [ -z "$JAVA_LTS_VERSION" ]; then
-        print_warning "Unable to detect latest Java LTS automatically, using 21-tem as fallback"
-        JAVA_LTS_VERSION="21-tem"
+    if [ -z "$JAVA_VERSION" ]; then
+        print_warning "Unable to detect latest stable Java automatically, using 21-tem as fallback"
+        JAVA_VERSION="21-tem"
     fi
 
-    sdk install java "$JAVA_LTS_VERSION"
-    sdk default java "$JAVA_LTS_VERSION"
+    sdk install java "$JAVA_VERSION"
+    sdk default java "$JAVA_VERSION"
     
-    print_success "SDKMAN! and Java ${JAVA_LTS_VERSION} installed successfully"
+    print_success "SDKMAN! and Java ${JAVA_VERSION} installed successfully"
 else
     print_warning "SDKMAN! already installed"
 fi
@@ -397,7 +397,7 @@ echo "  ✅ Docker with Docker Compose"
 echo "  ✅ pyenv with latest stable Python"
 echo "  ✅ Git (configured)"
 echo "  ✅ GitHub CLI"
-echo "  ✅ SDKMAN! with latest Java LTS"
+echo "  ✅ SDKMAN! with latest stable Java (Temurin)"
 echo "  ✅ Useful aliases and configurations"
 echo ""
 print_warning "Important notes:"
