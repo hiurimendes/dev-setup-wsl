@@ -31,6 +31,13 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+ensure_line_in_file() {
+    local line="$1"
+    local file="$2"
+    touch "$file"
+    grep -Fqx "$line" "$file" || echo "$line" >> "$file"
+}
+
 get_latest_github_release_tag() {
     local repo="$1"
     curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
@@ -165,26 +172,6 @@ if [ ! -d "$HOME/.pyenv" ]; then
     # Install pyenv
     curl https://pyenv.run | bash
     
-    # Add pyenv to profile files for proper initialization
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
-    echo 'eval "$(pyenv init --path)"' >> ~/.profile
-    
-    # Add pyenv to zprofile
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zprofile
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zprofile
-    echo 'eval "$(pyenv init --path)"' >> ~/.zprofile
-    
-    # Add pyenv to zshrc for interactive shells
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
-    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
-    echo 'eval "$(pyenv init -)"' >> ~/.zshrc
-    
-    # Also add to bashrc for bash users
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-    
     # Load pyenv for current session
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
@@ -200,6 +187,31 @@ if [ ! -d "$HOME/.pyenv" ]; then
     print_success "pyenv and Python $PYTHON_VERSION installed successfully"
 else
     print_warning "pyenv already installed"
+fi
+
+# Ensure pyenv is properly configured in shell startup files
+print_status "Configuring pyenv shell initialization..."
+ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.profile"
+ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.profile"
+ensure_line_in_file 'eval "$(pyenv init --path)"' "$HOME/.profile"
+
+ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.zprofile"
+ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zprofile"
+ensure_line_in_file 'eval "$(pyenv init --path)"' "$HOME/.zprofile"
+
+ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.zshrc"
+ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zshrc"
+ensure_line_in_file 'eval "$(pyenv init -)"' "$HOME/.zshrc"
+
+ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.bashrc"
+ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.bashrc"
+ensure_line_in_file 'eval "$(pyenv init -)"' "$HOME/.bashrc"
+
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+if command -v pyenv &> /dev/null; then
+    eval "$(pyenv init --path)"
+    eval "$(pyenv init -)"
 fi
 
 # Configure Git (basic setup)
