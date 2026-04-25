@@ -114,10 +114,10 @@ yarn dev
 ### Python Development
 ```bash
 # Install and manage Python versions
-LATEST_PYTHON=$(pyenv install --list | grep -E "^[[:space:]]*[0-9]+\\.[0-9]+\\.[0-9]+$" | tail -1 | xargs)
+LATEST_PYTHON=$(pyenv install --list | grep -E "^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$" | tail -1 | xargs)
 pyenv install "$LATEST_PYTHON"
 pyenv global "$LATEST_PYTHON"
-pyenv local 3.11
+pyenv local "$LATEST_PYTHON"
 
 # Virtual environments
 python -m venv myproject

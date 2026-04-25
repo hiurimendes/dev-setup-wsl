@@ -33,7 +33,9 @@ print_error() {
 
 get_latest_github_release_tag() {
     local repo="$1"
-    curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")' || true
+    curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
+        | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' \
+        | head -n1 || true
 }
 
 # Update system packages
@@ -248,11 +250,10 @@ if [ ! -d "$HOME/.sdkman" ]; then
     
     # Install latest Java LTS (Temurin) as default
     print_status "Installing latest Java LTS..."
-    JAVA_LTS_VERSION=$(sdk list java | awk -F'|' '
+    JAVA_LTS_VERSION=$(sdk list java | awk '
         tolower($0) ~ /tem/ && tolower($0) ~ /lts/ {
-            version=$6
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
-            if (version ~ /-tem$/) {
+            if (match($0, /[0-9]+([.][0-9]+)*-tem/)) {
+                version=substr($0, RSTART, RLENGTH)
                 print version
                 exit
             }
