@@ -100,15 +100,18 @@ fi
 # Install NVM (Node Version Manager)
 print_status "Installing NVM..."
 if [ ! -d "$HOME/.nvm" ]; then
+    NVM_FALLBACK_VERSION="v0.39.7"
     NVM_VERSION=$(get_latest_github_release_tag "nvm-sh/nvm")
-    NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh"
-    if [ -n "$NVM_VERSION" ]; then
-        NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
-    else
-        print_warning "Unable to detect latest NVM release, using master installer"
+    if [ -z "$NVM_VERSION" ]; then
+        NVM_VERSION="$NVM_FALLBACK_VERSION"
+        print_warning "Unable to detect latest NVM release, using pinned fallback ${NVM_VERSION}"
     fi
-
-    curl -o- "$NVM_INSTALL_URL" | bash
+    NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
+    if ! NVM_INSTALL_SCRIPT="$(curl -fsSL "$NVM_INSTALL_URL")" || [ -z "$NVM_INSTALL_SCRIPT" ]; then
+        print_error "Failed to download a valid NVM installer from $NVM_INSTALL_URL"
+        exit 1
+    fi
+    bash <<< "$NVM_INSTALL_SCRIPT"
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
