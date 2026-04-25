@@ -142,12 +142,12 @@ docker-compose logs -f
 # List available Java versions
 sdk list java
 
-# Install latest LTS (Temurin example)
-sdk install java 21-tem
+# Install latest LTS (choose an identifier marked as LTS from `sdk list java`)
+sdk install java <java-lts-identifier>
 
 # Switch Java version
-sdk use java 21-tem
-sdk default java 21-tem
+sdk use java <java-lts-identifier>
+sdk default java <java-lts-identifier>
 
 # Check current version
 sdk current java
