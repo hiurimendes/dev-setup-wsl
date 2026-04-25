@@ -38,6 +38,44 @@ ensure_line_in_file() {
     grep -Fqx "$line" "$file" || echo "$line" >> "$file"
 }
 
+remove_line_from_file() {
+    local line="$1"
+    local file="$2"
+    local tmp_file
+
+    touch "$file"
+    tmp_file="$(mktemp)"
+
+    awk -v line="$line" '$0 != line { print }' "$file" > "$tmp_file"
+    mv "$tmp_file" "$file"
+}
+
+ensure_line_before_pattern() {
+    local line="$1"
+    local file="$2"
+    local pattern="$3"
+    local tmp_file
+
+    touch "$file"
+    tmp_file="$(mktemp)"
+
+    awk -v line="$line" -v pattern="$pattern" '
+        $0 == line { next }
+        index($0, pattern) && !inserted {
+            print line
+            inserted=1
+        }
+        { print }
+        END {
+            if (!inserted) {
+                print line
+            }
+        }
+    ' "$file" > "$tmp_file"
+
+    mv "$tmp_file" "$file"
+}
+
 get_latest_github_release_tag() {
     local repo="$1"
     curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
@@ -202,13 +240,15 @@ ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.zprofile"
 ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zprofile"
 ensure_line_in_file 'eval "$(pyenv init --path)"' "$HOME/.zprofile"
 
-ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.zshrc"
-ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zshrc"
-ensure_line_in_file 'eval "$(pyenv init -)"' "$HOME/.zshrc"
+ensure_line_before_pattern 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.zshrc" 'source $ZSH/oh-my-zsh.sh'
+ensure_line_before_pattern 'command -v pyenv >/dev/null 2>&1 || export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zshrc" 'source $ZSH/oh-my-zsh.sh'
+ensure_line_before_pattern 'eval "$(pyenv init -)"' "$HOME/.zshrc" 'source $ZSH/oh-my-zsh.sh'
+remove_line_from_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zshrc"
 
 ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.bashrc"
-ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.bashrc"
+ensure_line_in_file 'command -v pyenv >/dev/null 2>&1 || export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.bashrc"
 ensure_line_in_file 'eval "$(pyenv init -)"' "$HOME/.bashrc"
+remove_line_from_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.bashrc"
 
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
@@ -265,15 +305,15 @@ if [ ! -d "$HOME/.sdkman" ]; then
     
     # Install latest stable Java (Temurin) as default
     print_status "Installing latest stable Java (Temurin)..."
-    JAVA_VERSION=$(sdk list java | awk '
+    JAVA_VERSION=$(sdk list java 2>/dev/null | awk '
         tolower($0) ~ /-tem/ && tolower($0) !~ /ea/ {
-            if (match($0, /[0-9]+([.][0-9]+)*-tem/)) {
+            if (match($0, /[0-9][0-9.]*-tem/)) {
                 print substr($0, RSTART, RLENGTH)
             }
         }
     ' | sort -Vr | head -1)
 
-    if ! [[ "$JAVA_VERSION" =~ ^[0-9]+(\.[0-9]+)*-tem$ ]]; then
+    if [ -z "$JAVA_VERSION" ] || ! [[ "$JAVA_VERSION" =~ ^[0-9]+([.][0-9]+)*-tem$ ]]; then
         print_warning "Unable to detect latest stable Java automatically, using 21-tem as fallback"
         JAVA_VERSION="21-tem"
     fi
