@@ -114,6 +114,7 @@ yarn dev
 ### Python Development
 ```bash
 # Install and manage Python versions
+# Filter stable releases, sort by version (desc) and pick the newest
 LATEST_PYTHON=$(pyenv install --list | grep -E "^[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+$" | sort -Vr | head -1 | xargs)
 pyenv install "$LATEST_PYTHON"
 pyenv global "$LATEST_PYTHON"

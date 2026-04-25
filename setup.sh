@@ -253,12 +253,10 @@ if [ ! -d "$HOME/.sdkman" ]; then
     JAVA_VERSION=$(sdk list java | awk '
         tolower($0) ~ /-tem/ && tolower($0) !~ /ea/ {
             if (match($0, /[0-9]+([.][0-9]+)*-tem/)) {
-                version=substr($0, RSTART, RLENGTH)
-                print version
-                exit
+                print substr($0, RSTART, RLENGTH)
             }
         }
-    ')
+    ' | sort -Vr | head -1)
 
     if ! [[ "$JAVA_VERSION" =~ ^[0-9]+(\.[0-9]+)*-tem$ ]]; then
         print_warning "Unable to detect latest stable Java automatically, using 21-tem as fallback"
