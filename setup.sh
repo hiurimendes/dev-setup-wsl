@@ -31,6 +31,58 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+ensure_line_in_file() {
+    local line="$1"
+    local file="$2"
+    touch "$file"
+    grep -Fqx "$line" "$file" || echo "$line" >> "$file"
+}
+
+remove_line_from_file() {
+    local line="$1"
+    local file="$2"
+    local tmp_file
+
+    touch "$file"
+    tmp_file="$(mktemp)"
+
+    awk -v line="$line" '$0 != line { print }' "$file" > "$tmp_file"
+    mv "$tmp_file" "$file"
+}
+
+ensure_line_before_pattern() {
+    local line="$1"
+    local file="$2"
+    local pattern="$3"
+    local tmp_file
+
+    touch "$file"
+    tmp_file="$(mktemp)"
+
+    awk -v line="$line" -v pattern="$pattern" '
+        $0 == line { next }
+        index($0, pattern) && !inserted {
+            print line
+            inserted=1
+        }
+        { print }
+        END {
+            if (!inserted) {
+                print line
+            }
+        }
+    ' "$file" > "$tmp_file"
+
+    mv "$tmp_file" "$file"
+}
+
+get_latest_github_release_tag() {
+    local repo="$1"
+    curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
+        | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' \
+        | head -n1 || true
+}
+
 # Update system packages
 print_status "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
@@ -86,7 +138,18 @@ fi
 # Install NVM (Node Version Manager)
 print_status "Installing NVM..."
 if [ ! -d "$HOME/.nvm" ]; then
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.4/install.sh | bash
+    NVM_FALLBACK_VERSION="v0.39.7"
+    NVM_VERSION=$(get_latest_github_release_tag "nvm-sh/nvm")
+    if [ -z "$NVM_VERSION" ]; then
+        NVM_VERSION="$NVM_FALLBACK_VERSION"
+        print_warning "Unable to detect latest NVM release, using pinned fallback ${NVM_VERSION}"
+    fi
+    NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
+    if ! NVM_INSTALL_SCRIPT="$(curl -fsSL "$NVM_INSTALL_URL")" || [ -z "$NVM_INSTALL_SCRIPT" ]; then
+        print_error "Failed to download a valid NVM installer from $NVM_INSTALL_URL"
+        exit 1
+    fi
+    bash <<< "$NVM_INSTALL_SCRIPT"
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
@@ -150,26 +213,6 @@ if [ ! -d "$HOME/.pyenv" ]; then
     # Install pyenv
     curl https://pyenv.run | bash
     
-    # Add pyenv to profile files for proper initialization
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.profile
-    echo 'eval "$(pyenv init --path)"' >> ~/.profile
-    
-    # Add pyenv to zprofile
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zprofile
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zprofile
-    echo 'eval "$(pyenv init --path)"' >> ~/.zprofile
-    
-    # Add pyenv to zshrc for interactive shells
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
-    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
-    echo 'eval "$(pyenv init -)"' >> ~/.zshrc
-    
-    # Also add to bashrc for bash users
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-    echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-    
     # Load pyenv for current session
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
@@ -185,6 +228,33 @@ if [ ! -d "$HOME/.pyenv" ]; then
     print_success "pyenv and Python $PYTHON_VERSION installed successfully"
 else
     print_warning "pyenv already installed"
+fi
+
+# Ensure pyenv is properly configured in shell startup files
+print_status "Configuring pyenv shell initialization..."
+ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.profile"
+ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.profile"
+ensure_line_in_file 'eval "$(pyenv init --path)"' "$HOME/.profile"
+
+ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.zprofile"
+ensure_line_in_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zprofile"
+ensure_line_in_file 'eval "$(pyenv init --path)"' "$HOME/.zprofile"
+
+ensure_line_before_pattern 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.zshrc" 'source $ZSH/oh-my-zsh.sh'
+ensure_line_before_pattern 'command -v pyenv >/dev/null 2>&1 || export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zshrc" 'source $ZSH/oh-my-zsh.sh'
+ensure_line_before_pattern 'eval "$(pyenv init -)"' "$HOME/.zshrc" 'source $ZSH/oh-my-zsh.sh'
+remove_line_from_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.zshrc"
+
+ensure_line_in_file 'export PYENV_ROOT="$HOME/.pyenv"' "$HOME/.bashrc"
+ensure_line_in_file 'command -v pyenv >/dev/null 2>&1 || export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.bashrc"
+ensure_line_in_file 'eval "$(pyenv init -)"' "$HOME/.bashrc"
+remove_line_from_file 'export PATH="$PYENV_ROOT/bin:$PATH"' "$HOME/.bashrc"
+
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+if command -v pyenv &> /dev/null; then
+    eval "$(pyenv init --path)"
+    eval "$(pyenv init -)"
 fi
 
 # Configure Git (basic setup)
@@ -233,12 +303,25 @@ if [ ! -d "$HOME/.sdkman" ]; then
     echo 'export SDKMAN_DIR="$HOME/.sdkman"' >> ~/.zshrc
     echo '[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"' >> ~/.zshrc
     
-    # Install Java 21 LTS as default
-    print_status "Installing Java 21 LTS..."
-    sdk install java 21.0.1-tem
-    sdk default java 21.0.1-tem
+    # Install latest stable Java (Temurin) as default
+    print_status "Installing latest stable Java (Temurin)..."
+    JAVA_VERSION=$(sdk list java 2>/dev/null | awk '
+        tolower($0) ~ /-tem/ && tolower($0) !~ /ea/ {
+            if (match($0, /[0-9][0-9.]*-tem/)) {
+                print substr($0, RSTART, RLENGTH)
+            }
+        }
+    ' | sort -Vr | head -1)
+
+    if [[ -z "$JAVA_VERSION" ]] || ! [[ "$JAVA_VERSION" =~ ^[0-9]+([.][0-9]+)*-tem$ ]]; then
+        print_warning "Unable to detect latest stable Java automatically, using 21-tem as fallback"
+        JAVA_VERSION="21-tem"
+    fi
+
+    sdk install java "$JAVA_VERSION"
+    sdk default java "$JAVA_VERSION"
     
-    print_success "SDKMAN! and Java 21 installed successfully"
+    print_success "SDKMAN! and Java ${JAVA_VERSION} installed successfully"
 else
     print_warning "SDKMAN! already installed"
 fi
@@ -367,7 +450,7 @@ echo "  ✅ Docker with Docker Compose"
 echo "  ✅ pyenv with latest stable Python"
 echo "  ✅ Git (configured)"
 echo "  ✅ GitHub CLI"
-echo "  ✅ SDKMAN! with Java 21 LTS"
+echo "  ✅ SDKMAN! with latest stable Java (Temurin)"
 echo "  ✅ Useful aliases and configurations"
 echo ""
 print_warning "Important notes:"
